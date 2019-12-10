@@ -11,6 +11,19 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
+#include <string>
+#include <iostream>
+#include <vector>
+#ifdef __APPLE__
+#include <sys/uio.h>
+#else
+#include <sys/io.h>
+#endif
+
+using namespace std;
+
+#include <dirent.h>
+#include <unistd.h>
 
 struct jdec_private;
 
@@ -31,6 +44,8 @@ typedef unsigned short uint16_t;
 
 /* Global variable to return the last error found while deconding */
 static char error_string[256];
+char *JPEGFileNameRecord[32767];
+long long JPEGFileNum=0;
 
 struct huffman_table
 {
@@ -191,6 +206,25 @@ static int parse_DHT(struct jdec_private *priv, const unsigned char *stream)
 
 
     while (length>0) {
+        //---------------------
+        char temp_str1[100]={0};
+        char temp_str2[100]={0};
+        temp=(char *)stream;
+        //fp = fopen("DHT.txt", "a+");
+        //fwrite(temp, 16, 1, fp);
+        for(j=0;j<16;j++){
+            //fprintf(fp,"%d ",temp[j]);
+            sprintf(temp_str2,"%02d ",temp[j]);
+            strcat(temp_str1,temp_str2);
+        }
+        //fprintf(fp,"\n-----------------------\n");
+        //fclose(fp);
+        //-----------------------------------------------------
+
+        //printf("DHT %s","定义霍夫曼表【交流系数表】%s",temp_str1,"Huffman表ID号和类型：1字节，高4位为表的类型，0：DC直流；1：AC交流 可以看出这里是直流表；低四位为Huffman表ID");
+        printf("%s\n",temp_str1);
+        //-----------------------------------------------------
+
         //跳过第1字节:
         //Huffman 表ID号和类型，高 4 位为表的类型，0：DC 直流；1：AC交流
         //低四位为 Huffman 表 ID。
@@ -209,44 +243,10 @@ static int parse_DHT(struct jdec_private *priv, const unsigned char *stream)
 
         if (index & 0xf0 )
         {
-            //---------------------
-            char temp_str1[100]={0};
-            char temp_str2[100]={0};
-            temp=(char *)stream;
-            //fp = fopen("DHT.txt", "a+");
-            //fwrite(temp, 16, 1, fp);
-            for(j=0;j<16;j++){
-                //fprintf(fp,"%d ",temp[j]);
-                sprintf(temp_str2,"%d ",temp[j]);
-                strcat(temp_str1,temp_str2);
-            }
-            //fprintf(fp,"\n-----------------------\n");
-            //fclose(fp);
-            //-----------------------------------------------------
-
-            //printf("DHT %s","定义霍夫曼表【交流系数表】%s",temp_str1,"Huffman表ID号和类型：1字节，高4位为表的类型，0：DC直流；1：AC交流 可以看出这里是直流表；低四位为Huffman表ID");
-            printf("DHTAC %s\n",temp_str1);
-            //-----------------------------------------------------
+            printf("AC\n");
             build_huffman_table(huff_bits, stream, &priv->HTAC[index&0xf]);
         }else{
-            //---------------------
-            char temp_str1[100]={0};
-            char temp_str2[100]={0};
-            temp=(char *)stream;
-            //fp = fopen("DHT.txt", "a+");
-            //fwrite(temp, 16, 1, fp);
-            for(j=0;j<16;j++){
-                //fprintf(fp,"%d ",temp[j]);
-                sprintf(temp_str2,"%d ",temp[j]);
-                strcat(temp_str1,temp_str2);
-            }
-            //fprintf(fp,"\n-----------------------\n");
-            //fclose(fp);
-            //-----------------------------------------------------
-
-            //printf("DHT %s","定义霍夫曼表【交流系数表】%s",temp_str1,"Huffman表ID号和类型：1字节，高4位为表的类型，0：DC直流；1：AC交流 可以看出这里是直流表；低四位为Huffman表ID");
-            printf("DHTDC %s\n",temp_str1);
-            //-----------------------------------------------------
+            printf("DC\n");
             build_huffman_table(huff_bits, stream, &priv->HTDC[index&0xf]);
         }
 
@@ -377,7 +377,7 @@ void tinyjpeg_get_size(struct jdec_private *priv, unsigned int *width, unsigned 
 /**
  * Load one jpeg image, and decompress it, and save the result.
  */
-int convert_one_image(const char *infilename)
+void convert_one_image(const char *infilename)
 {
     FILE *fp;
     unsigned int length_of_file;
@@ -445,13 +445,85 @@ int convert_one_image(const char *infilename)
 //    /* else called just free(jdec); */
 //
     free(buf);
-    return 0;
+
+}
+
+//——————————————————————————————————————————————————————————————————————
+//use for record all jpeg files in the dir
+int readFileList(char *basePath,FILE* picname)
+{
+    DIR *dir;
+    struct dirent *ptr;
+    char base[1000];
+    int namelen = 0;
+
+    if ((dir=opendir(basePath)) == NULL)
+    {
+        perror("Open dir error...");
+        exit(1);
+    }
+
+    while ((ptr=readdir(dir)) != NULL)
+    {
+        if(strcmp(ptr->d_name,".")==0 || strcmp(ptr->d_name,"..")==0)    ///current dir OR parrent dir
+            continue;
+        else if(ptr->d_type == 8)
+        {
+            namelen = strlen(ptr->d_name);if(ptr->d_name[namelen-4] == '.' && ( ptr->d_name[namelen-3] == 'j' || ptr->d_name[namelen-3] == 'J' ) && ( ptr->d_name[namelen-2] == 'p' || ptr->d_name[namelen-2] == 'P' ) && ( ptr->d_name[namelen-1] == 'g' || ptr->d_name[namelen-1] == 'G' ))    ///jpgfile
+            {
+                //ptr->d_name[namelen-4] = '\0';
+                JPEGFileNameRecord[JPEGFileNum]=(char *)malloc(10*sizeof(char));
+                strcpy(JPEGFileNameRecord[JPEGFileNum],ptr->d_name);
+                printf("%s",JPEGFileNameRecord[JPEGFileNum]);
+                JPEGFileNum++;
+                fprintf(picname,"%s\n",ptr->d_name);
+            }
+        }
+            //else if(ptr->d_type == 10)    ///link file
+            //printf("d_name:%s/%s\n",basePath,ptr->d_name);
+        else if(ptr->d_type == 4)    ///dir
+        {
+            memset(base,'\0',sizeof(base));
+            strcpy(base,basePath);
+            strcat(base,"/");
+            strcat(base,ptr->d_name);
+            readFileList(base,picname);
+        }
+    }
+    closedir(dir);
+    return 1;
+}
+
+void getFilelist(){
+    FILE *names;
+    DIR *dir;
+    char basePath[1000];
+    char trainpath[1000];
+    //pause();
+    ///get the current absoulte path
+    memset(basePath, '\0', sizeof(basePath));
+    // getcwd(basePath, 999);
+    // printf("the current dir is : %s\n", basePath);
+    strcpy(trainpath, basePath);
+    strcat(trainpath, "/Users/ljc/摄影照片/train.txt");
+    strcat(basePath, "/Users/ljc/摄影照片");
+    printf("%s\n", basePath);
+
+    ///get the file list
+    //memset(basePath,'\0',sizeof(basePath));
+    //strncpy(basePath,"./XL",-1);
+    names = fopen(trainpath, "a+");
+    readFileList(basePath, names);
+    fclose(names);
 }
 
 
 int main(){
 
-    char *fp="/Users/ljc/Documents/GitHub/JPEG_storage/LJC_0344.jpg";
+    getFilelist();
+
+    char *fp="/Users/ljc/Documents/GitHub/JPEG_storage/130-梁嘉城-原片.jpg";
     convert_one_image(fp);
+
     return 0;
 }
