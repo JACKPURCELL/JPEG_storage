@@ -17,20 +17,12 @@ struct jdec_private;
 #define HUFFMAN_BITS_SIZE  256
 #define HUFFMAN_HASH_NBITS 9
 #define HUFFMAN_HASH_SIZE  (1UL<<HUFFMAN_HASH_NBITS)
-#define HUFFMAN_HASH_MASK  (HUFFMAN_HASH_SIZE-1)
 
 #define HUFFMAN_TABLES	   4
 #define COMPONENTS	   3
-#define JPEG_MAX_WIDTH	   2048
-#define JPEG_MAX_HEIGHT	   2048
 
 #define be16_to_cpu(x) (((x)[0]<<8)|(x)[1])
-#define HUFFMAN_BITS_SIZE  256
-#define HUFFMAN_HASH_NBITS 9
-#define HUFFMAN_HASH_SIZE  (1UL<<HUFFMAN_HASH_NBITS)
-#define HUFFMAN_HASH_MASK  (HUFFMAN_HASH_SIZE-1)
 
-#define HUFFMAN_TABLES	   4
 
 #ifndef _UINT16_T
 #define _UINT16_T
@@ -52,8 +44,6 @@ struct huffman_table
      */
     uint16_t slowtable[16-HUFFMAN_HASH_NBITS][256];
 };
-
-
 
 
 
@@ -190,6 +180,11 @@ static int parse_DHT(struct jdec_private *priv, const unsigned char *stream)
     unsigned char huff_bits[17];
     int length, index;
 
+    //------------------------------------------
+    char *temp;
+    FILE *fp;
+    //------------------------------------------
+
     length = be16_to_cpu(stream) - 2;
     //跳过length字段
     stream += 2;	/* Skip length */
@@ -213,12 +208,47 @@ static int parse_DHT(struct jdec_private *priv, const unsigned char *stream)
         }
 
         if (index & 0xf0 )
-        {build_huffman_table(huff_bits, stream, &priv->HTAC[index&0xf]);
-            printf("......................\n");}
+        {
+            //---------------------
+            char temp_str1[100]={0};
+            char temp_str2[100]={0};
+            temp=(char *)stream;
+            //fp = fopen("DHT.txt", "a+");
+            //fwrite(temp, 16, 1, fp);
+            for(j=0;j<16;j++){
+                //fprintf(fp,"%d ",temp[j]);
+                sprintf(temp_str2,"%d ",temp[j]);
+                strcat(temp_str1,temp_str2);
+            }
+            //fprintf(fp,"\n-----------------------\n");
+            //fclose(fp);
+            //-----------------------------------------------------
 
-        else
-        {build_huffman_table(huff_bits, stream, &priv->HTDC[index&0xf]);
-            printf(";;;;;;;;;;;;;;;;;;;;;;;;\n");}
+            //printf("DHT %s","定义霍夫曼表【交流系数表】%s",temp_str1,"Huffman表ID号和类型：1字节，高4位为表的类型，0：DC直流；1：AC交流 可以看出这里是直流表；低四位为Huffman表ID");
+            printf("DHTAC %s\n",temp_str1);
+            //-----------------------------------------------------
+            build_huffman_table(huff_bits, stream, &priv->HTAC[index&0xf]);
+        }else{
+            //---------------------
+            char temp_str1[100]={0};
+            char temp_str2[100]={0};
+            temp=(char *)stream;
+            //fp = fopen("DHT.txt", "a+");
+            //fwrite(temp, 16, 1, fp);
+            for(j=0;j<16;j++){
+                //fprintf(fp,"%d ",temp[j]);
+                sprintf(temp_str2,"%d ",temp[j]);
+                strcat(temp_str1,temp_str2);
+            }
+            //fprintf(fp,"\n-----------------------\n");
+            //fclose(fp);
+            //-----------------------------------------------------
+
+            //printf("DHT %s","定义霍夫曼表【交流系数表】%s",temp_str1,"Huffman表ID号和类型：1字节，高4位为表的类型，0：DC直流；1：AC交流 可以看出这里是直流表；低四位为Huffman表ID");
+            printf("DHTDC %s\n",temp_str1);
+            //-----------------------------------------------------
+            build_huffman_table(huff_bits, stream, &priv->HTDC[index&0xf]);
+        }
 
         length -= 1;
         length -= 16;
@@ -268,7 +298,6 @@ static int parse_JFIF(struct jdec_private *priv, const unsigned char *stream)
     while (!sos_marker_found)
     {
         if (*stream++ != 0xff){
-            printf("emmmmmm!");
             exit(0);
         }
 
@@ -341,30 +370,7 @@ void tinyjpeg_get_size(struct jdec_private *priv, unsigned int *width, unsigned 
     *height = priv->height;
 }
 
-int tinyjpeg_get_components(struct jdec_private *priv, unsigned char **components)
-{
-    int i;
-    for (i=0; priv->components[i] && i<COMPONENTS; i++)
-        components[i] = priv->components[i];
-    return 0;
-}
 
-int tinyjpeg_set_components(struct jdec_private *priv, unsigned char **components, unsigned int ncomponents)
-{
-    unsigned int i;
-    if (ncomponents > COMPONENTS)
-        ncomponents = COMPONENTS;
-    for (i=0; i<ncomponents; i++)
-        priv->components[i] = components[i];
-    return 0;
-}
-
-int tinyjpeg_set_flags(struct jdec_private *priv, int flags)
-{
-    int oldflags = priv->flags;
-    priv->flags = flags;
-    return oldflags;
-}
 
 
 
@@ -395,7 +401,7 @@ int convert_one_image(const char *infilename)
     //分配内存
     jdec = tinyjpeg_init();
 //    //传入句柄--------------
-//    jdec->dlg=(CSpecialVIJPGDlg *)lparam;
+    //jdec->dlg=(CSpecialVIJPGDlg *)lparam;
 
     if (jdec == NULL)
         printf("Not enough memory to alloc the structure need for decompressing\n");
@@ -445,7 +451,7 @@ int convert_one_image(const char *infilename)
 
 int main(){
 
-    char *fp="/Users/ljc/Documents/GitHub/JPEG_storage/logo.jpg";
+    char *fp="/Users/ljc/Documents/GitHub/JPEG_storage/LJC_0344.jpg";
     convert_one_image(fp);
     return 0;
 }
