@@ -322,6 +322,8 @@ static int parse_JFIF(struct jdec_private *priv, const unsigned char *stream)
                     return -1;
                 dht_marker_found = 1;
                 break;
+            case SOS:
+                sos_marker_found = 1;
             default:
                 break;
         }
@@ -389,7 +391,8 @@ void convert_one_image(const char *infilename)
     /* Load the Jpeg into memory */
     fp = fopen(infilename, "rb");
     if (fp == NULL)
-        printf("Cannot open filename\n");
+       { printf("Cannot open filename\n");
+        exit(1);}
     length_of_file = filesize(fp);
     buf = (unsigned char *)malloc(length_of_file + 4);
     if (buf == NULL)
@@ -472,10 +475,18 @@ int readFileList(char *basePath,FILE* picname)
             namelen = strlen(ptr->d_name);if(ptr->d_name[namelen-4] == '.' && ( ptr->d_name[namelen-3] == 'j' || ptr->d_name[namelen-3] == 'J' ) && ( ptr->d_name[namelen-2] == 'p' || ptr->d_name[namelen-2] == 'P' ) && ( ptr->d_name[namelen-1] == 'g' || ptr->d_name[namelen-1] == 'G' ))    ///jpgfile
             {
                 //ptr->d_name[namelen-4] = '\0';
-                JPEGFileNameRecord[JPEGFileNum]=(char *)malloc(10*sizeof(char));
-                strcpy(JPEGFileNameRecord[JPEGFileNum],ptr->d_name);
-                printf("%s",JPEGFileNameRecord[JPEGFileNum]);
-                JPEGFileNum++;
+                JPEGFileNameRecord[JPEGFileNum]=(char *)malloc(100*sizeof(char));
+                char TempRecord[1000];
+                memset(TempRecord, '\0', sizeof(TempRecord));
+                strcat(TempRecord,basePath);
+                strcat(TempRecord,"/");
+                strcat(TempRecord,ptr->d_name);
+                strcpy(JPEGFileNameRecord[JPEGFileNum++],TempRecord);
+                memset(TempRecord, 0, sizeof(TempRecord));
+//                strcpy(JPEGFileNameRecord[JPEGFileNum++],ptr->d_name);
+                //printf("%s\n",JPEGFileNameRecord[JPEGFileNum]);
+                //fflush(stdout);
+                //JPEGFileNum++;
                 fprintf(picname,"%s\n",ptr->d_name);
             }
         }
@@ -508,12 +519,14 @@ void getFilelist(){
     strcat(trainpath, "/Users/ljc/摄影照片/train.txt");
     strcat(basePath, "/Users/ljc/摄影照片");
     printf("%s\n", basePath);
+    fflush(stdout);
 
     ///get the file list
     //memset(basePath,'\0',sizeof(basePath));
     //strncpy(basePath,"./XL",-1);
     names = fopen(trainpath, "a+");
     readFileList(basePath, names);
+
     fclose(names);
 }
 
@@ -521,9 +534,14 @@ void getFilelist(){
 int main(){
 
     getFilelist();
+    for(long long i=0;i<JPEGFileNum;i++){
 
-    char *fp="/Users/ljc/Documents/GitHub/JPEG_storage/130-梁嘉城-原片.jpg";
-    convert_one_image(fp);
+      //  char *fp="/Users/ljc/摄影照片LJC_0282.jpg";
+        //strcpy(fp,strcat("/Users/ljc/摄影照片",JPEGFileNameRecord[i]));
+        printf("%s\n",JPEGFileNameRecord[i]);
+        convert_one_image(JPEGFileNameRecord[i]);
+    }
 
+    memset(JPEGFileNameRecord, 0, sizeof(JPEGFileNameRecord));
     return 0;
 }
