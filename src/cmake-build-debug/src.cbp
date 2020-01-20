@@ -85,6 +85,12 @@
 		<Unit filename="/Users/ljc/Documents/GitHub/JPEG_storage/src/main.cpp">
 			<Option target="src"/>
 		</Unit>
+		<Unit filename="/Users/ljc/Documents/GitHub/JPEG_storage/src/stream.h">
+			<Option target="src"/>
+		</Unit>
+		<Unit filename="/Users/ljc/Documents/GitHub/JPEG_storage/src/tinyjpeg-internal.h">
+			<Option target="src"/>
+		</Unit>
 		<Unit filename="/Users/ljc/Documents/GitHub/JPEG_storage/src/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\"/>
 		</Unit>

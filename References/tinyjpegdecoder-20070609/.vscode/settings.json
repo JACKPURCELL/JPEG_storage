@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "tinyjpeg.h": "c"
+        "tinyjpeg.h": "c",
+        "__locale": "c",
+        "functional": "c"
     }
 }
