@@ -710,8 +710,8 @@ void getFilelist(){
     // getcwd(basePath, 999);
     // printf("the current dir is : %s\n", basePath);
     strcpy(trainpath, basePath);
-    strcat(trainpath, "/Users/ljc/Documents/GitHub/JPEG_storage/test/train.txt");
-    strcat(basePath, "/Users/ljc/Documents/GitHub/JPEG_storage/test");
+    strcat(trainpath, "/Users/ljc/摄影照片/train.txt");
+    strcat(basePath, "/Users/ljc/摄影照片");
     printf("%s\n", basePath);
     fflush(stdout);
 
@@ -988,183 +988,195 @@ void compare(){
 
 //____________________________________________________________
 
-#define N 256//带权值的叶子节点数或者是需要编码的字符数
-#define M 2*N-1//n个叶子节点构造的哈夫曼树有2n-1个结点
-#define MAX 10000
-typedef int TElemType;
-//静态三叉链表存储结构
-typedef struct{
-    //TElemType data;
-    unsigned int weight;//权值只能是正数
-    int parent;
-    int lchild;
-    int rchild;
-}HTNode;//, *HuffmanTree;
-typedef HTNode HuffmanTree[M+1];//0号单元不使用
-
-typedef char * HuffmanCode[N+1];//存储每个字符的哈夫曼编码表，是一个字符指针数组，每个数组元素是指向字符指针的指针
+// algo6-1.cpp 求赫夫曼编码。实现算法6.12的程序
+#include <stdio.h>
+//#include <malloc.h>
+#include <stdlib.h>
+#include <string.h>
+#include <climits>
 
 
-//在HT[1...k]里选择parent为0的且权值最小的2结点，其序号分别为s1,s2，parent不为0说明该结点已经参与构造了，故不许再考虑
-void select(HuffmanTree HT, int k, int &s1, int &s2){
-    //假设s1对应的权值总是<=s2对应的权值
-    unsigned int tmp = MAX, tmpi = 0;
-    for(int i = 1; i <= k; i++){
-        if(!HT[i].parent){//parent必须为0
-            if(tmp > HT[i].weight){
-                tmp = HT[i].weight;//tmp最后为最小的weight
-                tmpi = i;
-            }
-        }
-    }
-    s1 = tmpi;
-
-    tmp = MAX;
-    tmpi = 0;
-    for(int i = 1; i <= k; i++){
-        if((!HT[i].parent) && i!=s1){//parent为0
-            if(tmp > HT[i].weight){
-                tmp = HT[i].weight;
-                tmpi = i;
-            }
-        }
-    }
-    s2 = tmpi;
+int min(HuffmanTree t,int i)
+{ // 函数void select()调用
+    int j,flag;
+    unsigned int k=UINT_MAX; // 取k为不小于可能的值
+    for(j=1;j<=i;j++)
+        if(t[j].weight<k&&t[j].parent==0)
+            k=t[j].weight,flag=j;
+    t[flag].parent=1;
+    return flag;
 }
 
-//构造哈夫曼树
-void createHuffmanTree(HuffmanTree &HT, int *w, int n){
-    if(n <= 1)
+void select(HuffmanTree t,int i,int &s1,int &s2)
+{ // s1为最小的两个值中序号小的那个
+    int j;
+    s1=min(t,i);
+    s2=min(t,i);
+    if(s1>s2)
+    {
+        j=s1;
+        s1=s2;
+        s2=j;
+    }
+}
+
+void HuffmanCoding(HuffmanTree &HT,HuffmanCode &HC,int *w,int n) // 算法6.12
+{ // w存放n个字符的权值(均>0),构造赫夫曼树HT,并求出n个字符的赫夫曼编码HC
+    int m,i,s1,s2,start;
+    unsigned c,f;
+    HuffmanTree p;
+    char *cd;
+    if(n<=1)
         return;
-    //对树赋初值
-    int i;
-    for(i = 1; i <= n; i++){//HT前n个分量存储叶子节点，他们均带有权值
-        HT[i].weight = w[i];
-        HT[i].lchild = 0;
-        HT[i].parent = 0;
-        HT[i].rchild = 0;
+    m=2*n-1;
+    HT=(HuffmanTree)malloc((m+1)*sizeof(HTNode)); // 0号单元未用
+    for(p=HT+1,i=1;i<=n;++i,++p,++w)
+    {
+        (*p).weight=*w;
+        (*p).parent=0;
+        (*p).lchild=0;
+        (*p).rchild=0;
     }
-    for(; i <=M; i++){//HT后m-n个分量存储中间结点，最后一个分量显然是整棵树的根节点
-        HT[i].weight = 0;
-        HT[i].lchild = 0;
-        HT[i].parent = 0;
-        HT[i].rchild = 0;
+    for(;i<=m;++i,++p)
+        (*p).parent=0;
+    for(i=n+1;i<=m;++i) // 建赫夫曼树
+    { // 在HT[1~i-1]中选择parent为0且weight最小的两个结点,其序号分别为s1和s2
+        select(HT,i-1,s1,s2);
+        HT[s1].parent=HT[s2].parent=i;
+        HT[i].lchild=s1;
+        HT[i].rchild=s2;
+        HT[i].weight=HT[s1].weight+HT[s2].weight;
     }
-    //开始构建哈夫曼树，即创建HT的后m-n个结点的过程，直至创建出根节点。用哈夫曼算法
-    for(i = n+1; i <= M; i++){
-        int s1, s2;
-        select(HT, i-1, s1, s2);//在HT[1...i-1]里选择parent为0的且权值最小的2结点，其序号分别为s1,s2，parent不为0说明该结点已经参与构造了，故不许再考虑
-        HT[s1].parent = i;
-        HT[s2].parent = i;
-        HT[i].lchild = s1;
-        HT[i].rchild = s2;
-        HT[i].weight = HT[s1].weight + HT[s2].weight;
+    // 从叶子到根逆向求每个字符的赫夫曼编码
+    HC=(HuffmanCode)malloc((n+1)*sizeof(char*));
+    // 分配n个字符编码的头指针向量([0]不用)
+    cd=(char*)malloc(n*sizeof(char)); // 分配求编码的工作空间
+    cd[n-1]='\0'; // 编码结束符
+    for(i=1;i<=n;i++)
+    { // 逐个字符求赫夫曼编码
+        start=n-1; // 编码结束符位置
+        for(c=i,f=HT[i].parent;f!=0;c=f,f=HT[f].parent)
+            // 从叶子到根逆向求编码
+            if(HT[f].lchild==c)
+                cd[--start]='0';
+            else
+                cd[--start]='1';
+        HC[i]=(char*)malloc((n-start)*sizeof(char));
+        // 为第i个字符编码分配空间
+        strcpy(HC[i],&cd[start]); // 从cd复制编码(串)到HC
     }
+    free(cd); // 释放工作空间
 }
 
 
+HUFF_VAL_USEFUL *huff_val_useful=(HUFF_VAL_USEFUL*)malloc(sizeof(HUFF_VAL_USEFUL));
 
-//打印哈夫曼满树
-void printHuffmanTree(HuffmanTree HT, int ch[]){
-    printf("\n");
-    printf("data, weight, parent, lchild, rchild\n");
-    for(int i = 1; i <= M; i++){
-        if(i > N){
-          //  printf("  -, %5d, %5d, %5d, %5d\n", HT[i].weight, HT[i].parent, HT[i].lchild, HT[i].rchild);
-        }else{
-         //   printf("  %2x, %5d, %5d, %5d, %5d\n", ch[i], HT[i].weight, HT[i].parent, HT[i].lchild, HT[i].rchild);
+
+void build_huff_val_useful(){
+    int a=0,b=0,c=0,d=0;
+    for(int i=0;i<256;i++){
+        if(huff_val.DC0[i]!=0){
+            huff_val_useful->DC0.val[a]=i;
+            huff_val_useful->DC0.num[a]=huff_val.DC0[i];
+            a++;
         }
-    }
-    printf("\n");
-}
-
-
-//为每个字符求解哈夫曼编码，从叶子到根逆向求解每个字符的哈夫曼编码
-void encodingHuffmanCode(HuffmanTree HT, HuffmanCode &HC){
-    //char *tmp = (char *)malloc(n * sizeof(char));//将每一个字符对应的编码放在临时工作空间tmp里，每个字符的编码长度不会超过n
-    char tmp[N];
-    tmp[N-1] = '\0';//编码的结束符
-    int start, c, f;
-    for(int i = 1; i <= N; i++){//对于第i个待编码字符即第i个带权值的叶子节点
-        start = N-1;//编码生成以后，start将指向编码的起始位置
-        c = i;
-        f = HT[i].parent;
-
-        while(f){//f!=0,即f不是根节点的父节点
-            if(HT[f].lchild == c){
-                tmp[--start] = '0';
-            }else{//HT[f].rchild == c,注意:由于哈夫曼树中只存在叶子节点和度为2的节点，所以除开叶子节点，节点一定有左右2个分支
-                tmp[--start] = '1';
-            }
-            c = f;
-            f = HT[f].parent;
+        huff_val_useful->DC0.count=a;
+        if(huff_val.DC1[i]!=0){
+            huff_val_useful->DC1.val[b]=i;
+            huff_val_useful->DC1.num[b]=huff_val.DC1[i];
+            b++;
         }
-        HC[i] = (char *)malloc((N-start)*sizeof(char));//每次tmp的后n-start个位置有编码存在
-        strcpy(HC[i], &tmp[start]);//将tmp的后n-start个元素分给H[i]指向的的字符串
+        huff_val_useful->DC1.count=b;
+        if(huff_val.AC0[i]!=0){
+            huff_val_useful->AC0.val[c]=i;
+            huff_val_useful->AC0.num[c]=huff_val.AC0[i];
+            c++;
+        }
+        huff_val_useful->AC0.count=c;
+        if(huff_val.AC1[i]!=0){
+            huff_val_useful->AC1.val[d]=i;
+            huff_val_useful->AC1.num[d]=huff_val.AC1[i];
+            d++;
+        }
+        huff_val_useful->AC1.count=d;
     }
 }
 
-//打印哈夫曼编码表
-void printHuffmanCoding(HuffmanCode HC, int ch[]){
-    printf("\n");
-    long count=0;
-    for(int i = 1; i <= N; i++){
-        printf("%02x:%s\n", ch[i], HC[i]);
-        count+=(huff_val.AC1[i-1]*strlen(HC[i]));
-    }
-    printf("%ld\n",count);
-}
-
-
-//解码过程：从哈夫曼树的根节点出发，按字符'0'或'1'确定找其左孩子或右孩子，直至找到叶子节点即可，便求得该字串相应的字符
-void decodingHuffmanCode(HuffmanTree HT, char *ch, char testDecodingStr[], int len, char *result){
-    int p = M;//HT的最后一个节点是根节点，前n个节点是叶子节点
-    int i = 0;//指示测试串中的第i个字符
-    //char result[30];//存储解码以后的字符串
-    int j = 0;//指示结果串中的第j个字符
-    while(i<len){
-        if(testDecodingStr[i] == '0'){
-            p = HT[p].lchild;
-        }
-        if(testDecodingStr[i] == '1'){
-            p = HT[p].rchild;
-        }
-
-        if(p <= N){//p<=N则表明p为叶子节点,因为在构造哈夫曼树HT时，HT的m个节点中前n个节点为叶子节点
-            result[j] = ch[p];
-            j++;
-            p = M;//p重新指向根节点
-        }
-        i++;
-    }
-    result[j] = '\0';//结果串的结束符
-}
-
-
-void compare1(){
+void build_DC0_tree(){
+    printf("DC0\n");
     HuffmanTree HT;
+    HuffmanCode HC;
+    int *w,n,i;
 
-    TElemType ch[N+1];//0号单元不使用，存储n个等待编码的字符
-    int w[N+1];//0号单元不使用，存储n个字符对应的权值
+    n=huff_val_useful->DC0.count;
+    w=(int*)malloc(n*sizeof(int));
+    for(i=0;i<n;i++)
+        *(w+i) = huff_val_useful->DC0.num[i];
 
-    for(int i=i;i<=N;i++){
-        ch[i]=i-1;
-        w[i]=huff_val.AC1[i-1];
+    HuffmanCoding(HT,HC,w,n);
+    for(i=1;i<=n;i++){
+        printf("%02x,%s\n",huff_val_useful->DC0.val[i-1],HC[i]);
+        huff_val_useful->DC0.code[i-1]= & HC[i];
     }
+}
 
-    createHuffmanTree(HT, w , N);//构建哈夫曼树
-    printHuffmanTree(HT, ch);
+void build_DC1_tree(){
+    printf("DC1\n");
+    HuffmanTree HT;
+    HuffmanCode HC;
+    int *w,n,i;
 
-    HuffmanCode HC;//HC有n个元素，每个元素是一个指向字符串的指针，即每个元素是一个char *的变量
-    encodingHuffmanCode(HT, HC);//为每个字符求解哈夫曼编码
-    printHuffmanCoding(HC, ch);
+    n=huff_val_useful->DC1.count;
+    w=(int*)malloc(n*sizeof(int));
+    for(i=0;i<n;i++)
+        *(w+i) = huff_val_useful->DC1.num[i];
 
+    HuffmanCoding(HT,HC,w,n);
+    for(i=1;i<=n;i++){
+        printf("%02x,%s\n",huff_val_useful->DC1.val[i-1],HC[i]);
+        huff_val_useful->DC1.code[i-1]= & HC[i];
+    }
+}
+
+void build_AC0_tree(){
+    printf("AC0\n");
+    HuffmanTree HT;
+    HuffmanCode HC;
+    int *w,n,i;
+
+    n=huff_val_useful->AC0.count;
+    w=(int*)malloc(n*sizeof(int));
+    for(i=0;i<n;i++)
+        *(w+i) = huff_val_useful->AC0.num[i];
+
+    HuffmanCoding(HT,HC,w,n);
+    for(i=1;i<=n;i++){
+        printf("%02x,%s\n",huff_val_useful->AC0.val[i-1],HC[i]);
+        huff_val_useful->AC0.code[i-1]= & HC[i];
+    }
+}
+
+void build_AC1_tree(){
+    printf("AC1\n");
+    HuffmanTree HT;
+    HuffmanCode HC;
+    int *w,n,i;
+
+    n=huff_val_useful->AC1.count;
+    w=(int*)malloc(n*sizeof(int));
+    for(i=0;i<n;i++)
+        *(w+i) = huff_val_useful->AC1.num[i];
+
+    HuffmanCoding(HT,HC,w,n);
+    for(i=1;i<=n;i++){
+        printf("%02x,%s\n",huff_val_useful->AC1.val[i-1],HC[i]);
+        huff_val_useful->AC1.code[i-1]= & HC[i];
+    }
 }
 
 //__________________________________________________________
 
 int main(){
-
     //get the file fullpathname
     getFilelist();
 
@@ -1177,9 +1189,13 @@ int main(){
         convert_one_image(Dir_Record->dir_huff[workon].FullPathName);
     }
 
-compare();
-compare1();
 
+//    compare();
+    build_huff_val_useful();
+    build_DC0_tree();
+    build_DC1_tree();
+    build_AC0_tree();
+    build_AC1_tree();
 
 //    //compare the val
 //

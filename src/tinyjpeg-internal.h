@@ -85,3 +85,25 @@ struct huffman_val{
     int AC0[256]={0};
     int AC1[256]={0};
 }huff_val;
+
+
+typedef struct
+{
+    unsigned int weight;
+    unsigned int parent,lchild,rchild;
+}HTNode,*HuffmanTree; // 动态分配数组存储赫夫曼树
+typedef char **HuffmanCode; // 动态分配数组存储赫夫曼编码表
+
+typedef struct {
+    int val[256]={0};
+    long int num[256]={0};
+    HuffmanCode code[256];
+    int count=0;
+}one_hufftype;
+
+typedef struct{
+    one_hufftype DC0;
+    one_hufftype DC1;
+    one_hufftype AC0;
+    one_hufftype AC1;
+}HUFF_VAL_USEFUL;

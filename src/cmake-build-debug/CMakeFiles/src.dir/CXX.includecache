@@ -35,6 +35,14 @@ dirent.h
 -
 unistd.h
 -
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+climits
+-
 
 /Users/ljc/Documents/GitHub/JPEG_storage/src/tinyjpeg-internal.h
 
