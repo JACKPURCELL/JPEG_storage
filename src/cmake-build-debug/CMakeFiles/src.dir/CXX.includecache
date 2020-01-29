@@ -35,12 +35,6 @@ dirent.h
 -
 unistd.h
 -
-stdio.h
--
-stdlib.h
--
-string.h
--
 climits
 -
 

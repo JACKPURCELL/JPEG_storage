@@ -107,3 +107,27 @@ typedef struct{
     one_hufftype AC0;
     one_hufftype AC1;
 }HUFF_VAL_USEFUL;
+
+//one huffman information
+typedef struct one_huff{
+    unsigned int val;
+    unsigned int code;
+    unsigned int code_size;
+}ONE_HUFF;
+
+//one huffman table
+typedef struct one_huff_table{
+    ONE_HUFF huff_table[1024];
+    int one_huff_num;
+}ONE_HUFF_TABLE;
+
+//one jpeg four huffman table
+typedef struct one_jpeg_huff{
+    char FullPathName[1024];
+    ONE_HUFF_TABLE jpeg_huff[4];//DC0 DC1 AC0 AC1
+}ONE_JPEG_HUFF;
+
+//one jpeg four huffman table
+typedef struct dir_huff{
+    ONE_JPEG_HUFF dir_huff[32767];
+}DIR_HUFF;

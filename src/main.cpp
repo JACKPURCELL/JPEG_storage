@@ -39,15 +39,9 @@ typedef void (*convert_colorspace_fct) (struct jdec_private *priv);
 
 struct jdec_private;
 
-
 int tinyjpeg_decode(struct jdec_private *priv);
 
-
 struct component component_infos[COMPONENTS];
-
-
-
-
 
 #ifndef _UINT16_T
 #define _UINT16_T
@@ -75,29 +69,6 @@ enum std_markers {
 
 
 
-//one huffman information
-typedef struct one_huff{
-    unsigned int val;
-    unsigned int code;
-    unsigned int code_size;
-}ONE_HUFF;
-
-//one huffman table
-typedef struct one_huff_table{
-    ONE_HUFF huff_table[1024];
-    int one_huff_num;
-}ONE_HUFF_TABLE;
-
-//one jpeg four huffman table
-typedef struct one_jpeg_huff{
-    char FullPathName[1024];
-    ONE_HUFF_TABLE jpeg_huff[4];//DC0 DC1 AC0 AC1
-}ONE_JPEG_HUFF;
-
-//one jpeg four huffman table
-typedef struct dir_huff{
-    ONE_JPEG_HUFF dir_huff[32767];
-}DIR_HUFF;
 
 DIR_HUFF *Dir_Record=(DIR_HUFF*)malloc(sizeof(DIR_HUFF));
 
@@ -129,48 +100,122 @@ DIR_HUFF *All_record=(DIR_HUFF*)malloc(sizeof(DIR_HUFF));
  *                 result = (reservoir >> 15) & 3
  *
  */
-#define fill_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted) do { \
-   while (nbits_in_reservoir<nbits_wanted) \
-    { \
-      unsigned char c; \
-      if (stream >= priv->stream_end) \
-        longjmp(priv->jump_state, -EIO); \
-      c = *stream++; \
-      reservoir <<= 8; \
-      if (c == 0xff && *stream == 0x00) \
-        stream++; \
-      reservoir |= c; \
-      nbits_in_reservoir+=8; \
-    } \
-}  while(0);
-
-/* Signed version !!!! */
-#define get_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result) do { \
-   fill_nbits(reservoir,nbits_in_reservoir,stream,(nbits_wanted)); \
-   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted))); \
-   nbits_in_reservoir -= (nbits_wanted);  \
-   reservoir &= ((1U<<nbits_in_reservoir)-1); \
-   if ((unsigned int)result < (1UL<<((nbits_wanted)-1))) \
-       result += (0xFFFFFFFFUL<<(nbits_wanted))+1; \
-}  while(0);
-
-#define look_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result) do { \
-   fill_nbits(reservoir,nbits_in_reservoir,stream,(nbits_wanted)); \
-   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted))); \
-}  while(0);
-
-/* To speed up the decoding, we assume that the reservoir have enough bit
- * slow version:
- * #define skip_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted) do { \
- *   fill_nbits(reservoir,nbits_in_reservoir,stream,(nbits_wanted)); \
- *   nbits_in_reservoir -= (nbits_wanted); \
- *   reservoir &= ((1U<<nbits_in_reservoir)-1); \
- * }  while(0);
- */
-#define skip_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted) do { \
-   nbits_in_reservoir -= (nbits_wanted); \
-   reservoir &= ((1U<<nbits_in_reservoir)-1); \
-}  while(0);
+//#define fill_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted) do { \
+//   while (nbits_in_reservoir<nbits_wanted) \
+//    { \
+//      unsigned char c; \
+//      if (stream >= priv->stream_end) \
+//        longjmp(priv->jump_state, -EIO); \
+//      c = *stream++; \
+//      reservoir <<= 8; \
+//      if (c == 0xff && *stream == 0x00) \
+//        stream++; \
+//      reservoir |= c; \
+//      nbits_in_reservoir+=8; \
+//    } \
+//}  while(0);
+//
+//void* fill_nbits(unsigned int reservoir,unsigned int nbits_in_reservoir,const unsigned char *stream,int nbits_wanted){
+//   while (nbits_in_reservoir<nbits_wanted)
+//    {
+//      unsigned char c;
+//      if (stream >= priv->stream_end)
+//        longjmp(priv->jump_state, -EIO);
+//      c = *stream++;
+//      reservoir <<= 8;
+//      if (c == 0xff && *stream == 0x00)
+//        stream++;
+//      reservoir |= c;
+//      nbits_in_reservoir+=8;
+//    }
+//}
+//
+/////* Signed version !!!! */
+////#define get_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result) do { \
+////   fill_nbits(reservoir,nbits_in_reservoir,stream,(nbits_wanted)); \
+////   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted))); \
+////   nbits_in_reservoir -= (nbits_wanted);  \
+////   reservoir &= ((1U<<nbits_in_reservoir)-1); \
+////   if ((unsigned int)result < (1UL<<((nbits_wanted)-1))) \
+////       result += (0xFFFFFFFFUL<<(nbits_wanted))+1; \
+////}  while(0);
+//
+///* Signed version !!!! */
+//static void get_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result)  {
+//    while (nbits_in_reservoir<nbits_wanted)
+//    {
+//        unsigned char c;
+//        if (stream >= priv->stream_end)
+//            longjmp(priv->jump_state, -EIO);
+//        c = *stream++;
+//        reservoir <<= 8;
+//        if (c == 0xff && *stream == 0x00)
+//            stream++;
+//        reservoir |= c;
+//        nbits_in_reservoir+=8;
+//    }
+//   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted)));
+//   nbits_in_reservoir -= (nbits_wanted);
+//   reservoir &= ((1U<<nbits_in_reservoir)-1);
+//   if ((unsigned int)result < (1UL<<((nbits_wanted)-1)))
+//       result += (0xFFFFFFFFUL<<(nbits_wanted))+1;
+//}
+//
+////#define look_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result) do { \
+////   printf("beforefill %d\n",nbits_in_reservoir);\
+////   fill_nbits(reservoir,nbits_in_reservoir,stream,(nbits_wanted)); \
+////   printf("look %d\n",nbits_in_reservoir);\
+////   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted))); \
+////   printf("result %d\n",nbits_in_reservoir);\
+////}  while(0);
+//
+//static void look_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result) do {
+//   printf("beforefill %d\n",nbits_in_reservoir);
+//   while (nbits_in_reservoir<nbits_wanted)
+//    {
+//        unsigned char c;
+//        if (stream >= priv->stream_end)
+//            longjmp(priv->jump_state, -EIO);
+//        c = *stream++;
+//        reservoir <<= 8;
+//        if (c == 0xff && *stream == 0x00)
+//            stream++;
+//        reservoir |= c;
+//        nbits_in_reservoir+=8;
+//    }
+//   printf("look %d\n",nbits_in_reservoir);
+//   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted)));
+//   printf("result %d\n",nbits_in_reservoir);
+//}
+//
+//
+////#define change_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result) do { \
+////   fill_nbits(reservoir,nbits_in_reservoir,stream,(nbits_wanted)); \
+////
+////   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted))); \
+////}  while(0);
+//
+///* To speed up the decoding, we assume that the reservoir have enough bit
+// * slow version:
+// * #define skip_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted) do { \
+// *   fill_nbits(reservoir,nbits_in_reservoir,stream,(nbits_wanted)); \
+// *   nbits_in_reservoir -= (nbits_wanted); \
+// *   reservoir &= ((1U<<nbits_in_reservoir)-1); \
+// * }  while(0);
+// */
+////#define skip_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted) do { \
+////   nbits_in_reservoir -= (nbits_wanted); \
+////   printf("skip1 %d\n",nbits_in_reservoir);\
+////   reservoir &= ((1U<<nbits_in_reservoir)-1); \
+////      printf("skip2 %d\n",nbits_in_reservoir);\
+////}  while(0);
+//
+//static void skip_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted){
+//   nbits_in_reservoir -= (nbits_wanted);
+//   printf("skip1 %d\n",nbits_in_reservoir);
+//   reservoir &= ((1U<<nbits_in_reservoir)-1);
+//   printf("skip2 %d\n",nbits_in_reservoir);
+//}
 
 long long workon=0;
 
@@ -280,7 +325,7 @@ static void build_huffman_table(const unsigned char *bits, const unsigned char *
              * column with value val
              */
             int repeat = 1UL<<(HUFFMAN_HASH_NBITS - code_size);
-            code <<= HUFFMAN_HASH_NBITS - code_size;
+            code <<= HUFFMAN_HASH_NBITS - code_size;//一定是9位
             while ( repeat-- )
                 table->lookup[code++] = val;
 
@@ -493,6 +538,7 @@ static int parse_SOS(struct jdec_private *priv, const unsigned char *stream)
     return 0;
 }
 
+
 //解各种不同的标签
 static int parse_JFIF(struct jdec_private *priv, const unsigned char *stream)
 {
@@ -699,19 +745,23 @@ int readFileList(char *basePath,FILE* picname)
     return 1;
 }
 
+char basePath[1000];
+char trainpath[1000];
+
 void getFilelist(){
     FILE *names;
     DIR *dir;
-    char basePath[1000];
-    char trainpath[1000];
+
     //pause();
     ///get the current absoulte path
     memset(basePath, '\0', sizeof(basePath));
     // getcwd(basePath, 999);
     // printf("the current dir is : %s\n", basePath);
     strcpy(trainpath, basePath);
-    strcat(trainpath, "/Users/ljc/摄影照片/train.txt");
-    strcat(basePath, "/Users/ljc/摄影照片");
+//    strcat(trainpath, "/Users/ljc/摄影照片/train.txt");
+//    strcat(basePath, "/Users/ljc/摄影照片");
+    strcat(trainpath, "/Users/ljc/Documents/GitHub/JPEG_storage/test/train.txt");
+    strcat(basePath, "/Users/ljc/Documents/GitHub/JPEG_storage/test");
     printf("%s\n", basePath);
     fflush(stdout);
 
@@ -742,26 +792,76 @@ static int get_next_huffman_code(struct jdec_private *priv, struct huffman_table
     unsigned int extra_nbits, nbits;
     uint16_t *slowtable;
 
-    look_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, HUFFMAN_HASH_NBITS, hcode);
-    value = huffman_table->lookup[hcode];
+//    look_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, HUFFMAN_HASH_NBITS, hcode);
+//    printf("beforefill %d\n",priv->nbits_in_reservoir);
+    while (priv->nbits_in_reservoir<HUFFMAN_HASH_NBITS)
+    {
+        unsigned char c;
+        if (priv->stream >= priv->stream_end)
+            longjmp(priv->jump_state, -EIO);
+        c = *priv->stream++;
+        priv->reservoir <<= 8;
+        if (c == 0xff && *priv->stream == 0x00)
+            priv->stream++;
+        priv->reservoir |= c;
+        priv->nbits_in_reservoir+=8;
+    }
+//    printf("look %d\n",priv->nbits_in_reservoir);
+    hcode = ((priv->reservoir)>>(priv->nbits_in_reservoir-(HUFFMAN_HASH_NBITS)));
+//    printf("result %d\n",priv->nbits_in_reservoir);
+
+
+    value = huffman_table->lookup[hcode];//val,在快速查找中
     if (__likely(value >= 0))
     {
         unsigned int code_size = huffman_table->code_size[value];
-        skip_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, code_size);
-        return value;
+//        skip_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, code_size);//跳过val的codesize，即跳过他自己
+        priv->nbits_in_reservoir -= (code_size);
+//        printf("skip1 %d\n",priv->nbits_in_reservoir);
+        priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
+//        printf("skip2 %d\n",priv->nbits_in_reservoir);
+
+
+
+        return value;//返回val
+
     }
 
     /* Decode more bits each time ... */
     for (extra_nbits=0; extra_nbits<16-HUFFMAN_HASH_NBITS; extra_nbits++)
-    {
+    {//val不在快速查找表中
         nbits = HUFFMAN_HASH_NBITS + 1 + extra_nbits;
 
-        look_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, nbits, hcode);
+//        look_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, nbits, hcode);
+//        printf("beforefill %d\n",priv->nbits_in_reservoir);
+        while (priv->nbits_in_reservoir<nbits)
+        {
+            unsigned char c;
+            if (priv->stream >= priv->stream_end)
+                longjmp(priv->jump_state, -EIO);
+            c = *priv->stream++;
+            priv->reservoir <<= 8;
+            if (c == 0xff && *priv->stream == 0x00)
+                priv->stream++;
+            priv->reservoir |= c;
+            priv->nbits_in_reservoir+=8;
+        }
+//        printf("look %d\n",priv->nbits_in_reservoir);
+        hcode = ((priv->reservoir)>>(priv->nbits_in_reservoir-(nbits)));
+//        printf("result %d\n",priv->nbits_in_reservoir);
+
+
         slowtable = huffman_table->slowtable[extra_nbits];
         /* Search if the code is in this array */
         while (slowtable[0]) {
             if (slowtable[0] == hcode) {
-                skip_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, nbits);
+//                skip_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, nbits);
+                priv->nbits_in_reservoir -= (nbits);
+//                printf("skip1 %d\n",priv->nbits_in_reservoir);
+                priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
+//                printf("skip2 %d\n",priv->nbits_in_reservoir);
+
+
                 return slowtable[1];
             }
             slowtable+=2;
@@ -790,7 +890,7 @@ static void process_Huffman_data_unit(struct jdec_private *priv, int component)
     memset(DCT, 0, sizeof(DCT));
 
     /* DC coefficient decoding */
-    huff_code = get_next_huffman_code(priv, c->DC_table);
+    huff_code = get_next_huffman_code(priv, c->DC_table);//返回val
 //    if(huff_code!=0)
 
         switch (component){
@@ -809,7 +909,28 @@ static void process_Huffman_data_unit(struct jdec_private *priv, int component)
         }
 
     if (huff_code) {
-        get_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, huff_code, DCT[0]);//再读huffman个
+//        get_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, huff_code, DCT[0]);//读huff_code个数据
+        while (priv->nbits_in_reservoir<huff_code)
+        {
+            unsigned char c;
+            if (priv->stream >= priv->stream_end)
+                longjmp(priv->jump_state, -EIO);
+            c = *priv->stream++;
+            priv->reservoir <<= 8;
+            if (c == 0xff && *priv->stream == 0x00)
+                priv->stream++;
+            priv->reservoir |= c;
+            priv->nbits_in_reservoir+=8;
+        }
+        DCT[0] = ((priv->reservoir)>>(priv->nbits_in_reservoir-(huff_code)));
+        priv->nbits_in_reservoir -= (huff_code);
+        priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
+        if ((unsigned int)DCT[0] < (1UL<<((huff_code)-1)))
+            DCT[0] += (0xFFFFFFFFUL<<(huff_code))+1;
+
+
+
+
         DCT[0] += c->previous_DC;//直流系数差分还原
         c->previous_DC = DCT[0];
     } else {
@@ -822,7 +943,9 @@ static void process_Huffman_data_unit(struct jdec_private *priv, int component)
     {
         huff_code = get_next_huffman_code(priv, c->AC_table);
 //        if(huff_code!=0)
-
+//        if(huff_code==241&&component!=0) {
+//            printf("aaaaaaaaa\n");
+//        }
         switch (component){
             case 0:
                 huff_val.AC0[huff_code]++;
@@ -856,7 +979,27 @@ static void process_Huffman_data_unit(struct jdec_private *priv, int component)
                 snprintf(printf_string, sizeof(printf_string), "Bad huffman data (buffer overflow)");
                 break;
             }
-            get_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, size_val, DCT[j]);
+//            get_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, size_val, DCT[j]);
+            while (priv->nbits_in_reservoir<size_val)
+            {
+                unsigned char c;
+                if (priv->stream >= priv->stream_end)
+                    longjmp(priv->jump_state, -EIO);
+                c = *priv->stream++;
+                priv->reservoir <<= 8;
+                if (c == 0xff && *priv->stream == 0x00)
+                    priv->stream++;
+                priv->reservoir |= c;
+                priv->nbits_in_reservoir+=8;
+            }
+            DCT[j] = ((priv->reservoir)>>(priv->nbits_in_reservoir-(size_val)));
+            priv->nbits_in_reservoir -= (size_val);
+            priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
+            if ((unsigned int)DCT[j] < (1UL<<((size_val)-1)))
+                DCT[j] += (0xFFFFFFFFUL<<(size_val))+1;
+
+
+
             j++;
         }
     }
@@ -988,13 +1131,7 @@ void compare(){
 
 //____________________________________________________________
 
-// algo6-1.cpp 求赫夫曼编码。实现算法6.12的程序
-#include <stdio.h>
-//#include <malloc.h>
-#include <stdlib.h>
-#include <string.h>
 #include <climits>
-
 
 int min(HuffmanTree t,int i)
 { // 函数void select()调用
@@ -1079,26 +1216,26 @@ void build_huff_val_useful(){
             huff_val_useful->DC0.val[a]=i;
             huff_val_useful->DC0.num[a]=huff_val.DC0[i];
             a++;
+            huff_val_useful->DC0.count=a;
         }
-        huff_val_useful->DC0.count=a;
         if(huff_val.DC1[i]!=0){
             huff_val_useful->DC1.val[b]=i;
             huff_val_useful->DC1.num[b]=huff_val.DC1[i];
             b++;
+            huff_val_useful->DC1.count=b;
         }
-        huff_val_useful->DC1.count=b;
         if(huff_val.AC0[i]!=0){
             huff_val_useful->AC0.val[c]=i;
             huff_val_useful->AC0.num[c]=huff_val.AC0[i];
             c++;
+            huff_val_useful->AC0.count=c;
         }
-        huff_val_useful->AC0.count=c;
         if(huff_val.AC1[i]!=0){
             huff_val_useful->AC1.val[d]=i;
             huff_val_useful->AC1.num[d]=huff_val.AC1[i];
             d++;
+            huff_val_useful->AC1.count=d;
         }
-        huff_val_useful->AC1.count=d;
     }
 }
 
@@ -1117,6 +1254,7 @@ void build_DC0_tree(){
     for(i=1;i<=n;i++){
         printf("%02x,%s\n",huff_val_useful->DC0.val[i-1],HC[i]);
         huff_val_useful->DC0.code[i-1]= & HC[i];
+//        printf("%s\n",*huff_val_useful->DC0.code[i-1]);
     }
 }
 
@@ -1145,13 +1283,18 @@ void build_AC0_tree(){
     int *w,n,i;
 
     n=huff_val_useful->AC0.count;
+    for(int j=0;j<n;j++){
+        if(huff_val_useful->AC0.num[j]<((huff_val_useful->AC0.num[1])*0.0001)){//避免code太长
+            huff_val_useful->AC0.num[j]+=((huff_val_useful->AC0.num[1])*0.0001);
+        }
+    }
     w=(int*)malloc(n*sizeof(int));
     for(i=0;i<n;i++)
         *(w+i) = huff_val_useful->AC0.num[i];
 
     HuffmanCoding(HT,HC,w,n);
     for(i=1;i<=n;i++){
-        printf("%02x,%s\n",huff_val_useful->AC0.val[i-1],HC[i]);
+        printf("%02x,%s,%d\n",huff_val_useful->AC0.val[i-1],HC[i], strlen(HC[i]));
         huff_val_useful->AC0.code[i-1]= & HC[i];
     }
 }
@@ -1163,18 +1306,416 @@ void build_AC1_tree(){
     int *w,n,i;
 
     n=huff_val_useful->AC1.count;
+    for(int j=0;j<n;j++){
+        if(huff_val_useful->AC1.num[j]<((huff_val_useful->AC1.num[1])*0.0001)){
+            huff_val_useful->AC1.num[j]+=((huff_val_useful->AC1.num[1])*0.0001);
+        }
+    }
     w=(int*)malloc(n*sizeof(int));
     for(i=0;i<n;i++)
         *(w+i) = huff_val_useful->AC1.num[i];
 
     HuffmanCoding(HT,HC,w,n);
     for(i=1;i<=n;i++){
-        printf("%02x,%s\n",huff_val_useful->AC1.val[i-1],HC[i]);
+        printf("%02x,%s,%d\n",huff_val_useful->AC1.val[i-1],HC[i],strlen(HC[i]));
         huff_val_useful->AC1.code[i-1]= & HC[i];
     }
 }
 
 //__________________________________________________________
+
+
+
+static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct huffman_table *huffman_table,FILE *fp)
+{
+    int value, hcode;
+    unsigned int extra_nbits, nbits;
+    uint16_t *slowtable;
+
+//    look_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, HUFFMAN_HASH_NBITS, hcode);
+//    printf("beforefill %d\n",priv->nbits_in_reservoir);
+    while (priv->nbits_in_reservoir<HUFFMAN_HASH_NBITS)
+    {
+        unsigned char c;
+        if (priv->stream >= priv->stream_end)
+            longjmp(priv->jump_state, -EIO);
+        c = *priv->stream++;
+        priv->reservoir <<= 8;
+        if (c == 0xff && *priv->stream == 0x00)
+            priv->stream++;
+        priv->reservoir |= c;
+        priv->nbits_in_reservoir+=8;
+    }
+//    printf("look %d\n",priv->nbits_in_reservoir);
+    hcode = ((priv->reservoir)>>(priv->nbits_in_reservoir-(HUFFMAN_HASH_NBITS)));
+//    printf("result %d\n",priv->nbits_in_reservoir);
+
+
+    value = huffman_table->lookup[hcode];//val,在快速查找中
+
+    if (__likely(value >= 0))
+    {
+        unsigned int code_size = huffman_table->code_size[value];
+//        skip_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, code_size);//跳过val的codesize，即跳过他自己
+
+        priv->nbits_in_reservoir -= (code_size);
+        priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
+
+
+
+        return value;//返回val
+
+    }
+
+    /* Decode more bits each time ... */
+    for (extra_nbits=0; extra_nbits<16-HUFFMAN_HASH_NBITS; extra_nbits++)
+    {//val不在快速查找表中
+        nbits = HUFFMAN_HASH_NBITS + 1 + extra_nbits;
+
+//        look_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, nbits, hcode);
+//        printf("beforefill %d\n",priv->nbits_in_reservoir);
+        while (priv->nbits_in_reservoir<nbits)
+        {
+            unsigned char c;
+            if (priv->stream >= priv->stream_end)
+                longjmp(priv->jump_state, -EIO);
+            c = *priv->stream++;
+            priv->reservoir <<= 8;
+            if (c == 0xff && *priv->stream == 0x00)
+                priv->stream++;
+            priv->reservoir |= c;
+            priv->nbits_in_reservoir+=8;
+        }
+//        printf("look %d\n",priv->nbits_in_reservoir);
+        hcode = ((priv->reservoir)>>(priv->nbits_in_reservoir-(nbits)));
+//        printf("result %d\n",priv->nbits_in_reservoir);
+
+
+        slowtable = huffman_table->slowtable[extra_nbits];
+        /* Search if the code is in this array */
+        while (slowtable[0]) {
+            if (slowtable[0] == hcode) {
+//                skip_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, nbits);
+                priv->nbits_in_reservoir -= (nbits);
+//                printf("skip1 %d\n",priv->nbits_in_reservoir);
+                priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
+//                printf("skip2 %d\n",priv->nbits_in_reservoir);
+
+
+                return slowtable[1];
+            }
+            slowtable+=2;
+        }
+    }
+    return 0;
+}
+
+HuffmanCode  Find_New_code(int val,int type){
+    switch (type){
+        case 0:
+            for(int i=0;i<256;i++){
+                if(huff_val_useful->DC0.val[i]==val){
+                    return huff_val_useful->DC0.code[i];
+                }
+            }
+            break;
+        case 1:
+            for(int i=0;i<256;i++){
+                if(huff_val_useful->DC1.val[i]==val){
+                    return huff_val_useful->DC1.code[i];
+                }
+            }
+            break;
+        case 2:
+            for(int i=0;i<256;i++){
+                if(huff_val_useful->AC0.val[i]==val){
+                    return huff_val_useful->AC0.code[i];
+                }
+            }
+            break;
+        case 3:
+            for(int i=0;i<256;i++){
+                if(huff_val_useful->AC1.val[i]==val){
+                    return huff_val_useful->AC1.code[i];
+                }
+            }
+            break;
+    }
+
+}
+static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, int component,FILE *fp)
+{
+    unsigned char j;
+    unsigned int huff_code;
+    unsigned char size_val, count_0;
+
+    struct component *c = &priv->component_infos[component];
+    short int DCT[64];
+
+
+    /* Initialize the DCT coef table */
+    memset(DCT, 0, sizeof(DCT));
+
+    HuffmanCode write_code;
+    /* DC coefficient decoding */
+    huff_code = WriteNewData_get_next_huffman_code(priv, c->DC_table,fp);
+//    if(huff_code!=0)
+    switch (component){
+        case 0:
+//            huff_val_useful->DC0.code[i-1]= & HC[i];
+            write_code=Find_New_code(huff_code,0);
+            printf("%s\n",*write_code);
+            break;
+        case 1:
+            write_code=Find_New_code(huff_code,1);
+            printf("%s\n",*write_code);
+            break;
+        case 2:
+            write_code=Find_New_code(huff_code,1);
+            printf("%s\n",*write_code);
+            break;
+    }
+    fprintf(fp,"%s",*write_code);
+
+//    fwrite(*write_code,sizeof(write_code),1,fp);
+    fclose(fp);
+//    fprintf(fp,"%s\n",path);
+
+//    (*write_code,fp);
+//    fwrite(write_code,sizeof(write_code),1,fp);
+
+    if (huff_code) {
+//        get_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, huff_code, DCT[0]);//再读huffman个
+        while (priv->nbits_in_reservoir<huff_code)
+        {
+            unsigned char c;
+            if (priv->stream >= priv->stream_end)
+                longjmp(priv->jump_state, -EIO);
+            c = *priv->stream++;
+            priv->reservoir <<= 8;
+            if (c == 0xff && *priv->stream == 0x00)
+                priv->stream++;
+            priv->reservoir |= c;
+            priv->nbits_in_reservoir+=8;
+        }
+        DCT[0] = ((priv->reservoir)>>(priv->nbits_in_reservoir-(huff_code)));
+        priv->nbits_in_reservoir -= (huff_code);
+        priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
+        if ((unsigned int)DCT[0] < (1UL<<((huff_code)-1)))
+            DCT[0] += (0xFFFFFFFFUL<<(huff_code))+1;
+
+
+
+        DCT[0] += c->previous_DC;//直流系数差分还原
+        c->previous_DC = DCT[0];
+    } else {
+        DCT[0] = c->previous_DC;
+    }
+
+    /* AC coefficient decoding */
+    j = 1;
+    while (j<64)
+    {
+        huff_code = WriteNewData_get_next_huffman_code(priv, c->AC_table,fp);
+//        if(huff_code!=0)
+
+        switch (component){
+            case 0:
+                huff_val.AC0[huff_code]++;
+                //printf("AC0 %02x\n", huff_code);//val
+                break;
+            case 1:
+                huff_val.AC1[huff_code]++;
+                //printf("AC1 %02x\n", huff_code);//val
+                break;
+            case 2:
+                huff_val.AC1[huff_code]++;
+                //printf("AC1 %02x\n", huff_code);//val
+                break;
+        }
+
+        size_val = huff_code & 0xF;//低四位，读取n位
+        count_0 = huff_code >> 4;//高四位，n个0
+
+        if (size_val == 0)
+        { /* RLE */
+            if (count_0 == 0)
+                break;	/* EOB found, go out */
+            else if (count_0 == 0xF)
+                j += 16;	/* skip 16 zeros */
+        }
+        else
+        {
+            j += count_0;	/* skip count_0 zeroes */
+            if (__unlikely(j >= 64))
+            {
+                snprintf(printf_string, sizeof(printf_string), "Bad huffman data (buffer overflow)");
+                break;
+            }
+//            get_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, size_val, DCT[j]);
+            while (priv->nbits_in_reservoir<size_val)
+            {
+                unsigned char c;
+                if (priv->stream >= priv->stream_end)
+                    longjmp(priv->jump_state, -EIO);
+                c = *priv->stream++;
+                priv->reservoir <<= 8;
+                if (c == 0xff && *priv->stream == 0x00)
+                    priv->stream++;
+                priv->reservoir |= c;
+                priv->nbits_in_reservoir+=8;
+            }
+            DCT[j] = ((priv->reservoir)>>(priv->nbits_in_reservoir-(size_val)));
+            priv->nbits_in_reservoir -= (size_val);
+            priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
+            if ((unsigned int)DCT[j] < (1UL<<((size_val)-1)))
+                DCT[j] += (0xFFFFFFFFUL<<(size_val))+1;
+
+
+
+            j++;
+        }
+    }
+
+
+    for (j = 0; j < 64; j++)
+        c->DCT[j] = DCT[j];
+}
+
+/*
+ * Decode all the 3 components for 1x1
+ */
+static void WriteNewData_One_mcu(struct jdec_private *priv,FILE *fp)
+{
+    // Y
+    WriteNewData_process_Huffman_data_unit(priv, cY,fp);//DC0,AC0,0
+
+    // Cb
+    WriteNewData_process_Huffman_data_unit(priv, cCb,fp);//DC1,AC1,1
+
+    // Cr
+    WriteNewData_process_Huffman_data_unit(priv, cCr,fp);//DC1,AC1,2
+}
+
+int WriteNewData_workon;
+
+int WriteNewData(struct jdec_private *priv)
+{
+    char path[1000];
+    memset(path, '\0', sizeof(path));
+    strcpy(path,Dir_Record->dir_huff[WriteNewData_workon].FullPathName);
+    strcat(path,".txt");
+    FILE *fp=fopen(path,"a+");
+
+    unsigned int x, y, xstride_by_mcu, ystride_by_mcu;
+    unsigned int bytes_per_blocklines[3], bytes_per_mcu[3];
+
+    if (setjmp(priv->jump_state))
+        return -1;
+
+    /* To keep gcc happy initialize some array */
+    bytes_per_mcu[1] = 0;
+    bytes_per_mcu[2] = 0;
+    bytes_per_blocklines[1] = 0;
+    bytes_per_blocklines[2] = 0;
+
+
+    xstride_by_mcu = ystride_by_mcu = 8;
+    if ((priv->component_infos[cY].Hfactor | priv->component_infos[cY].Vfactor) == 1) {
+        printf("Use decode 1x1 sampling\n");
+    } else if (priv->component_infos[cY].Hfactor == 1) {
+        ystride_by_mcu = 16;
+        printf("Use decode 1x2 sampling (not supported)\n");
+    } else if (priv->component_infos[cY].Vfactor == 2) {
+        xstride_by_mcu = 16;
+        ystride_by_mcu = 16;
+        printf("Use decode 2x2 sampling\n");
+    } else {
+        xstride_by_mcu = 16;
+        printf("Use decode 2x1 sampling\n");
+    }
+
+    resync(priv);
+
+
+
+    /* Just the decode the image by macroblock (size is 8x8, 8x16, or 16x16) */
+    for (y=0; y < priv->height/ystride_by_mcu; y++)
+    {
+        for (x=0; x < priv->width; x+=xstride_by_mcu)
+        {
+            WriteNewData_One_mcu(priv,fp);
+
+            if (priv->restarts_to_go>0)
+            {
+                priv->restarts_to_go--;
+                if (priv->restarts_to_go == 0)
+                {
+                    priv->stream -= (priv->nbits_in_reservoir/8);
+                    resync(priv);
+                    if (find_next_rst_marker(priv) < 0)
+                        return -1;
+                }
+            }
+        }
+    }
+
+    printf("Input file size: %d\n", priv->stream_length+2);
+    printf("Input bytes actually read: %d\n", priv->stream - priv->stream_begin + 2);
+
+    return 0;
+}
+
+/**
+ * Load one jpeg image, and decompress it, and save the result.
+ */
+void WriteNewData_convert_one_image(const char *infilename)
+{
+    FILE *fp;
+    unsigned int length_of_file;
+    unsigned int width, height;
+    unsigned char *buf;
+    struct jdec_private *jdec;
+    unsigned char *components[3];
+
+    /* Load the Jpeg into memory */
+    fp = fopen(infilename, "rb");
+    if (fp == NULL)
+    { printf("Cannot open filename\n");
+        exit(1);}
+    length_of_file = filesize(fp);
+    buf = (unsigned char *)malloc(length_of_file + 4);
+    if (buf == NULL)
+        printf("Not enough memory for loading file\n");
+    fread(buf, length_of_file, 1, fp);
+    fclose(fp);
+
+    /* Decompress it */
+    //分配内存
+    jdec = tinyjpeg_init();
+//    //传入句柄--------------
+    //jdec->dlg=(CSpecialVIJPGDlg *)lparam;
+
+    if (jdec == NULL)
+        printf("Not enough memory to alloc the structure need for decompressing\n");
+    //解头部
+    if (tinyjpeg_parse_header(jdec, buf, length_of_file)<0)
+        printf(tinyjpeg_get_printfstring(jdec));
+    /* Get the size of the image */
+    //获得图像长宽
+    tinyjpeg_get_size(jdec, &width, &height);
+
+    snprintf(printf_string, sizeof(printf_string),"Decoding JPEG image...\n");
+    //解码实际数据
+    if (WriteNewData(jdec) < 0)
+        printf(tinyjpeg_get_printfstring(jdec));
+
+    free(buf);
+
+}
+
+//__________________________________________________________
+
 
 int main(){
     //get the file fullpathname
@@ -1196,6 +1737,12 @@ int main(){
     build_DC1_tree();
     build_AC0_tree();
     build_AC1_tree();
+
+
+    for(WriteNewData_workon=0;WriteNewData_workon<JPEGFileNum;WriteNewData_workon++){
+        printf("\nWriteNewData %s\n",Dir_Record->dir_huff[WriteNewData_workon].FullPathName);
+        WriteNewData_convert_one_image(Dir_Record->dir_huff[WriteNewData_workon].FullPathName);
+    }
 
 //    //compare the val
 //
