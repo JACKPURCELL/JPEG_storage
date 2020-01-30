@@ -37,6 +37,8 @@ unistd.h
 -
 climits
 -
+bitset
+-
 
 /Users/ljc/Documents/GitHub/JPEG_storage/src/tinyjpeg-internal.h
 

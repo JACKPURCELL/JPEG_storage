@@ -1132,6 +1132,7 @@ void compare(){
 //____________________________________________________________
 
 #include <climits>
+#include <bitset>
 
 int min(HuffmanTree t,int i)
 { // 函数void select()调用
@@ -1324,7 +1325,99 @@ void build_AC1_tree(){
 
 //__________________________________________________________
 
+bitset<8> head_string(HuffmanCode write_code, int bits){
+    int code_bits=strlen(*write_code);
+    bitset<8> return_code("00000000");
+    int code_size=strlen(*write_code);
+    char a[1];
+    for(int i=0;i<code_bits-bits;i++){
+        a[0]= ((*write_code)[code_size - 1 - i - bits]);
+        return_code[i]= atoi(a);
+//        printf("%c\n",(*write_code)[code_size - 1 - i - bits]);
+        memset(a,'\0', sizeof(a));
+    }
+    return return_code;
+}
 
+bitset<8> use8_string(HuffmanCode write_code,int bits){
+    bitset<8> return_code("00000000");
+    int code_size=strlen(*write_code);
+    char a[1];
+
+    for(int i=0;i<8;i++){
+        a[0]= ((*write_code)[code_size - 1 - i - bits]);
+        return_code[i]= atoi(a);
+//        printf("%c\n",(*write_code)[code_size - 1 - i - bits]);
+        memset(a,'\0', sizeof(a));
+    }
+    return return_code;
+}
+
+bitset<8> tail_string(HuffmanCode write_code,int bits){
+    bitset<8> return_code("00000000");
+    int code_size=strlen(*write_code);
+    char a[1];
+//    for(int i=0;i<code_size;i++){
+//        printf("%c\n",(*write_code)[i]);
+//    }
+    for(int i=0;i<bits;i++){
+        a[0]= ((*write_code)[code_size - 1 - i]);
+        return_code[i]= atoi(a);
+//        printf("%c\n",(*write_code)[code_size-1-i]);
+//        memset(a,'\0', sizeof(a));
+    }
+    return return_code;
+}
+
+
+bitset<8> WriteNewData_Stream("00000000");
+int WriteNewData_Stream_Bits=0;
+void Write_Stream_To_File(HuffmanCode write_code,FILE *fp){
+    unsigned char byte;
+    unsigned long temp;
+    int code_bits=strlen(*write_code);
+    int notwrite_code_bits=code_bits;
+    bitset<8> temp_code("00000000");
+    if(code_bits>(8-WriteNewData_Stream_Bits)){//不能塞下，则先补满
+        WriteNewData_Stream.operator<<=(8-WriteNewData_Stream_Bits);
+        notwrite_code_bits=code_bits-(8-WriteNewData_Stream_Bits);
+        temp_code.operator|=(head_string((write_code), (notwrite_code_bits)));
+        WriteNewData_Stream.operator|=(temp_code);
+        temp=WriteNewData_Stream.to_ulong();//转换为long类型
+        byte=temp;//转换为char类型
+        fprintf(fp,"%c",byte);
+
+        WriteNewData_Stream.operator<<=(8);
+        temp_code.operator<<=(8);
+        WriteNewData_Stream_Bits=0;
+        if(notwrite_code_bits>=8){//补满后剩下的大于8位，则再次补满
+            notwrite_code_bits=code_bits-8;//3
+            temp_code.operator|=(use8_string((write_code),(notwrite_code_bits)));
+            WriteNewData_Stream.operator|=(temp_code);
+            temp=WriteNewData_Stream.to_ulong();//转换为long类型
+            byte=temp;//转换为char类型
+            fprintf(fp,"%c",byte);
+            WriteNewData_Stream.operator<<=(8);
+            temp_code.operator<<=(8);
+            WriteNewData_Stream_Bits=0;
+
+        }
+        if(notwrite_code_bits>=0){//不大于8位，则先填入，或补满后还有，则先填入
+            temp_code.operator|=(tail_string(write_code,notwrite_code_bits));
+            WriteNewData_Stream.operator|=(temp_code);
+            WriteNewData_Stream_Bits=notwrite_code_bits;
+            temp_code.operator<<=(8);
+        }
+    }else{//直接可以塞下
+        WriteNewData_Stream.operator<<=(code_bits);
+        WriteNewData_Stream.operator|=(tail_string(write_code,notwrite_code_bits));
+//        temp=WriteNewData_Stream.to_ulong();//转换为long类型
+//        byte=temp;//转换为char类型
+//        fprintf(fp,"%c",byte);
+        WriteNewData_Stream_Bits+=code_bits;
+        temp_code.operator<<=(8);
+    }
+}
 
 static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct huffman_table *huffman_table,FILE *fp)
 {
@@ -1443,6 +1536,32 @@ HuffmanCode  Find_New_code(int val,int type){
     }
 
 }
+
+
+void tobin(int a,char* str){
+    if(a>=0){
+        char *p=(char*)&a,c=0,f=0,pos=-1;//p指向a的首地址
+        for(int o=0;o<4;++o){
+            for(int i=0;i<8;++i){
+                c=p[3-o]&(1<<(7-i));
+                if(!f&&!(f=c))continue;
+                str[++pos]=c?'1':'0';
+            }
+        }
+    }else{
+        a=-a;
+        char *p=(char*)&a,c=0,f=0,pos=-1;//p指向a的首地址
+        for(int o=0;o<4;++o){
+            for(int i=0;i<8;++i){
+                c=p[3-o]&(1<<(7-i));
+                if(!f&&!(f=c))continue;
+                str[++pos]=c?'0':'1';
+            }
+        }
+    }
+}
+
+
 static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, int component,FILE *fp)
 {
     unsigned char j;
@@ -1464,21 +1583,21 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
         case 0:
 //            huff_val_useful->DC0.code[i-1]= & HC[i];
             write_code=Find_New_code(huff_code,0);
-            printf("%s\n",*write_code);
+//            printf("%s\n",*write_code);
             break;
         case 1:
             write_code=Find_New_code(huff_code,1);
-            printf("%s\n",*write_code);
+//            printf("%s\n",*write_code);
             break;
         case 2:
             write_code=Find_New_code(huff_code,1);
-            printf("%s\n",*write_code);
+//            printf("%s\n",*write_code);
             break;
     }
-    fprintf(fp,"%s",*write_code);
+    Write_Stream_To_File(write_code,fp);
 
 //    fwrite(*write_code,sizeof(write_code),1,fp);
-    fclose(fp);
+//    fclose(fp);
 //    fprintf(fp,"%s\n",path);
 
 //    (*write_code,fp);
@@ -1503,8 +1622,9 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
         priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
         if ((unsigned int)DCT[0] < (1UL<<((huff_code)-1)))
             DCT[0] += (0xFFFFFFFFUL<<(huff_code))+1;
-
-
+        tobin(DCT[0],*write_code);
+        Write_Stream_To_File(write_code,fp);
+//        fclose(fp);
 
         DCT[0] += c->previous_DC;//直流系数差分还原
         c->previous_DC = DCT[0];
@@ -1521,18 +1641,21 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
 
         switch (component){
             case 0:
-                huff_val.AC0[huff_code]++;
-                //printf("AC0 %02x\n", huff_code);//val
+//            huff_val_useful->DC0.code[i-1]= & HC[i];
+                write_code=Find_New_code(huff_code,2);
+//            printf("%s\n",*write_code);
                 break;
             case 1:
-                huff_val.AC1[huff_code]++;
-                //printf("AC1 %02x\n", huff_code);//val
+                write_code=Find_New_code(huff_code,3);
+//            printf("%s\n",*write_code);
                 break;
             case 2:
-                huff_val.AC1[huff_code]++;
-                //printf("AC1 %02x\n", huff_code);//val
+                write_code=Find_New_code(huff_code,3);
+//            printf("%s\n",*write_code);
                 break;
         }
+        Write_Stream_To_File(write_code,fp);
+
 
         size_val = huff_code & 0xF;//低四位，读取n位
         count_0 = huff_code >> 4;//高四位，n个0
@@ -1570,13 +1693,13 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
             priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
             if ((unsigned int)DCT[j] < (1UL<<((size_val)-1)))
                 DCT[j] += (0xFFFFFFFFUL<<(size_val))+1;
-
+            tobin(DCT[j],*write_code);
+            Write_Stream_To_File(write_code,fp);
 
 
             j++;
         }
     }
-
 
     for (j = 0; j < 64; j++)
         c->DCT[j] = DCT[j];
@@ -1599,13 +1722,9 @@ static void WriteNewData_One_mcu(struct jdec_private *priv,FILE *fp)
 
 int WriteNewData_workon;
 
-int WriteNewData(struct jdec_private *priv)
+int WriteNewData(struct jdec_private *priv,FILE *fp)
 {
-    char path[1000];
-    memset(path, '\0', sizeof(path));
-    strcpy(path,Dir_Record->dir_huff[WriteNewData_workon].FullPathName);
-    strcat(path,".txt");
-    FILE *fp=fopen(path,"a+");
+
 
     unsigned int x, y, xstride_by_mcu, ystride_by_mcu;
     unsigned int bytes_per_blocklines[3], bytes_per_mcu[3];
@@ -1659,10 +1778,7 @@ int WriteNewData(struct jdec_private *priv)
             }
         }
     }
-
-    printf("Input file size: %d\n", priv->stream_length+2);
-    printf("Input bytes actually read: %d\n", priv->stream - priv->stream_begin + 2);
-
+    printf("Write New Data Finish!\n");
     return 0;
 }
 
@@ -1706,10 +1822,28 @@ void WriteNewData_convert_one_image(const char *infilename)
     tinyjpeg_get_size(jdec, &width, &height);
 
     snprintf(printf_string, sizeof(printf_string),"Decoding JPEG image...\n");
-    //解码实际数据
-    if (WriteNewData(jdec) < 0)
-        printf(tinyjpeg_get_printfstring(jdec));
 
+
+    char path[1000];
+    memset(path, '\0', sizeof(path));
+    strcpy(path,Dir_Record->dir_huff[WriteNewData_workon].FullPathName);
+    strcat(path,".dat");
+    FILE *fpdat=fopen(path,"w+");
+
+    //解码实际数据
+    if (WriteNewData(jdec,fpdat) < 0)
+        printf(tinyjpeg_get_printfstring(jdec));
+//写完数据后清空存储区
+
+    WriteNewData_Stream.operator<<=(8-WriteNewData_Stream_Bits);
+    unsigned char byte;
+    unsigned long temp;
+    temp=WriteNewData_Stream.to_ulong();//转换为long类型
+    byte=temp;//转换为char类型
+    fprintf(fpdat,"%c",byte);
+    WriteNewData_Stream.operator<<=(8);
+    WriteNewData_Stream_Bits=0;
+    fclose(fpdat);
     free(buf);
 
 }
@@ -1742,6 +1876,7 @@ int main(){
     for(WriteNewData_workon=0;WriteNewData_workon<JPEGFileNum;WriteNewData_workon++){
         printf("\nWriteNewData %s\n",Dir_Record->dir_huff[WriteNewData_workon].FullPathName);
         WriteNewData_convert_one_image(Dir_Record->dir_huff[WriteNewData_workon].FullPathName);
+
     }
 
 //    //compare the val
