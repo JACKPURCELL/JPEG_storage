@@ -35,6 +35,7 @@ using namespace std;
 #endif
 
 typedef void (*decode_MCU_fct) (struct jdec_private *priv);
+typedef void (*WriteNewData_decode_MCU_fct) (struct jdec_private *priv,FILE *fp);
 typedef void (*convert_colorspace_fct) (struct jdec_private *priv);
 
 struct jdec_private;
@@ -967,7 +968,7 @@ static void process_Huffman_data_unit(struct jdec_private *priv, int component)
         if (size_val == 0)
         { /* RLE */
             if (count_0 == 0)
-                break;	/* EOB found, go out */
+                break;	/* EOB found, go out 0x00 代表接下來所有的交流係數全爲 0 */
             else if (count_0 == 0xF)
                 j += 16;	/* skip 16 zeros */
         }
@@ -1042,6 +1043,98 @@ static void resync(struct jdec_private *priv)
         priv->restarts_to_go = -1;
 }
 
+
+
+/*
+ * Decode all the 3 components for 1x1
+ */
+static void decode_MCU_1x1_3planes(struct jdec_private *priv)
+{
+    // Y
+    process_Huffman_data_unit(priv, cY);
+
+    // Cb
+    process_Huffman_data_unit(priv, cCb);
+
+    // Cr
+    process_Huffman_data_unit(priv, cCr);
+}
+
+
+
+/*
+ * Decode a 2x1
+ *  .-------.
+ *  | 1 | 2 |
+ *  `-------'
+ */
+static void decode_MCU_2x1_3planes(struct jdec_private *priv)
+{
+    // Y
+    process_Huffman_data_unit(priv, cY);
+    process_Huffman_data_unit(priv, cY);
+
+    // Cb
+    process_Huffman_data_unit(priv, cCb);
+
+    // Cr
+    process_Huffman_data_unit(priv, cCr);
+}
+
+
+
+/*
+ * Decode a 2x2
+ *  .-------.
+ *  | 1 | 2 |
+ *  |---+---|
+ *  | 3 | 4 |
+ *  `-------'
+ */
+static void decode_MCU_2x2_3planes(struct jdec_private *priv)
+{
+    // Y
+    process_Huffman_data_unit(priv, cY);
+    process_Huffman_data_unit(priv, cY);
+    process_Huffman_data_unit(priv, cY);
+    process_Huffman_data_unit(priv, cY);
+
+    // Cb
+    process_Huffman_data_unit(priv, cCb);
+
+    // Cr
+    process_Huffman_data_unit(priv, cCr);
+}
+
+
+/*
+ * Decode a 1x2 mcu
+ *  .---.
+ *  | 1 |
+ *  |---|
+ *  | 2 |
+ *  `---'
+ */
+static void decode_MCU_1x2_3planes(struct jdec_private *priv)
+{
+    // Y
+    process_Huffman_data_unit(priv, cY);
+    process_Huffman_data_unit(priv, cY);
+
+    // Cb
+    process_Huffman_data_unit(priv, cCb);
+
+    // Cr
+    process_Huffman_data_unit(priv, cCr);
+}
+
+static const decode_MCU_fct decode_mcu_3comp_table[4] = {
+        decode_MCU_1x1_3planes,
+        decode_MCU_1x2_3planes,
+        decode_MCU_2x1_3planes,
+        decode_MCU_2x2_3planes,
+};
+
 /**
  * Decode and convert the jpeg image into @pixfmt@ image
  *
@@ -1052,6 +1145,8 @@ int tinyjpeg_decode(struct jdec_private *priv)
 {
     unsigned int x, y, xstride_by_mcu, ystride_by_mcu;
     unsigned int bytes_per_blocklines[3], bytes_per_mcu[3];
+    decode_MCU_fct decode_MCU;
+    const decode_MCU_fct *decode_mcu_table;
 
     if (setjmp(priv->jump_state))
         return -1;
@@ -1062,18 +1157,22 @@ int tinyjpeg_decode(struct jdec_private *priv)
     bytes_per_blocklines[1] = 0;
     bytes_per_blocklines[2] = 0;
 
-
+    decode_mcu_table = decode_mcu_3comp_table;
     xstride_by_mcu = ystride_by_mcu = 8;
     if ((priv->component_infos[cY].Hfactor | priv->component_infos[cY].Vfactor) == 1) {
+        decode_MCU = decode_mcu_table[0];
         printf("Use decode 1x1 sampling\n");
     } else if (priv->component_infos[cY].Hfactor == 1) {
+        decode_MCU = decode_mcu_table[1];
         ystride_by_mcu = 16;
         printf("Use decode 1x2 sampling (not supported)\n");
     } else if (priv->component_infos[cY].Vfactor == 2) {
+        decode_MCU = decode_mcu_table[3];
         xstride_by_mcu = 16;
         ystride_by_mcu = 16;
         printf("Use decode 2x2 sampling\n");
     } else {
+        decode_MCU = decode_mcu_table[2];
         xstride_by_mcu = 16;
         printf("Use decode 2x1 sampling\n");
     }
@@ -1087,7 +1186,7 @@ int tinyjpeg_decode(struct jdec_private *priv)
     {
         for (x=0; x < priv->width; x+=xstride_by_mcu)
         {
-            decode_ONE_MCU(priv);
+            decode_MCU(priv);
 
             if (priv->restarts_to_go>0)
             {
@@ -1266,6 +1365,7 @@ void build_DC1_tree(){
     int *w,n,i;
 
     n=huff_val_useful->DC1.count;
+
     w=(int*)malloc(n*sizeof(int));
     for(i=0;i<n;i++)
         *(w+i) = huff_val_useful->DC1.num[i];
@@ -1325,6 +1425,8 @@ void build_AC1_tree(){
 
 //__________________________________________________________
 
+
+
 bitset<8> head_string(HuffmanCode write_code, int bits){
     int code_bits=strlen(*write_code);
     bitset<8> return_code("00000000");
@@ -1371,10 +1473,14 @@ bitset<8> tail_string(HuffmanCode write_code,int bits){
 
 
 bitset<8> WriteNewData_Stream("00000000");
+bitset<8> WriteNewData_last_Stream("00000000");
+
 int WriteNewData_Stream_Bits=0;
 void Write_Stream_To_File(HuffmanCode write_code,FILE *fp){
     unsigned char byte;
+    unsigned char last_byte;
     unsigned long temp;
+    unsigned long last_temp;
     int code_bits=strlen(*write_code);
     int notwrite_code_bits=code_bits;
     bitset<8> temp_code("00000000");
@@ -1385,18 +1491,67 @@ void Write_Stream_To_File(HuffmanCode write_code,FILE *fp){
         WriteNewData_Stream.operator|=(temp_code);
         temp=WriteNewData_Stream.to_ulong();//转换为long类型
         byte=temp;//转换为char类型
-        fprintf(fp,"%c",byte);
 
+        WriteNewData_last_Stream.operator<<=(4);
+        WriteNewData_last_Stream.operator|=(WriteNewData_Stream.operator>>(4));
+        last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
+        last_byte=last_temp;
+
+        if(last_byte==0xff){//出现af fa转换为af f0 0a
+            fprintf(fp,"%c",0xf0);
+            WriteNewData_last_Stream.operator<<=(8);
+            for(int i=0;i<4;i++){
+                WriteNewData_last_Stream[i]=WriteNewData_Stream[i];
+            }
+            last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
+            last_byte=last_temp;
+            fprintf(fp,"%c",last_byte);
+            WriteNewData_Stream=WriteNewData_last_Stream;
+        } else if (byte==0xff){//aa ff -> aa ff 00
+            fprintf(fp,"%c",byte);
+            fprintf(fp,"%c",0x00);
+            WriteNewData_Stream<<=(8);
+        }else{
+            fprintf(fp,"%c",byte);
+        }
+
+        WriteNewData_last_Stream=WriteNewData_Stream;
         WriteNewData_Stream.operator<<=(8);
         temp_code.operator<<=(8);
         WriteNewData_Stream_Bits=0;
+
+
         if(notwrite_code_bits>=8){//补满后剩下的大于8位，则再次补满
             notwrite_code_bits=code_bits-8;//3
             temp_code.operator|=(use8_string((write_code),(notwrite_code_bits)));
             WriteNewData_Stream.operator|=(temp_code);
             temp=WriteNewData_Stream.to_ulong();//转换为long类型
             byte=temp;//转换为char类型
-            fprintf(fp,"%c",byte);
+
+            WriteNewData_last_Stream.operator<<=(4);
+            WriteNewData_last_Stream.operator|=(WriteNewData_Stream.operator>>(4));
+            last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
+            last_byte=last_temp;
+
+            if(last_byte==0xff){//出现af fa转换为af f0 0a
+                fprintf(fp,"%c",0xf0);
+                WriteNewData_last_Stream.operator<<=(8);
+                for(int i=0;i<4;i++){
+                    WriteNewData_last_Stream[i]=WriteNewData_Stream[i];
+                }
+                last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
+                last_byte=last_temp;
+                fprintf(fp,"%c",last_byte);
+                WriteNewData_Stream=WriteNewData_last_Stream;
+            } else if (byte==0xff){//aa ff -> aa ff 00
+                fprintf(fp,"%c",byte);
+                fprintf(fp,"%c",0x00);
+                WriteNewData_Stream<<=(8);
+            }else{
+                fprintf(fp,"%c",byte);
+            }
+
+            WriteNewData_last_Stream=WriteNewData_Stream;
             WriteNewData_Stream.operator<<=(8);
             temp_code.operator<<=(8);
             WriteNewData_Stream_Bits=0;
@@ -1614,6 +1769,7 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
             priv->reservoir <<= 8;
             if (c == 0xff && *priv->stream == 0x00)
                 priv->stream++;
+            //爲了與標記碼做區別，在讀取壓縮圖像數據時，若讀取到一個 byte 爲 0xFF ，則後面會緊接一個 0x00 的 byte，但這個 0x00 的 byte 不是數據，必須忽略。
             priv->reservoir |= c;
             priv->nbits_in_reservoir+=8;
         }
@@ -1622,6 +1778,7 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
         priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
         if ((unsigned int)DCT[0] < (1UL<<((huff_code)-1)))
             DCT[0] += (0xFFFFFFFFUL<<(huff_code))+1;
+//        HuffmanCode write_code;
         tobin(DCT[0],*write_code);
         Write_Stream_To_File(write_code,fp);
 //        fclose(fp);
@@ -1692,7 +1849,7 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
             priv->nbits_in_reservoir -= (size_val);
             priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
             if ((unsigned int)DCT[j] < (1UL<<((size_val)-1)))
-                DCT[j] += (0xFFFFFFFFUL<<(size_val))+1;
+                DCT[j] += (0xFFFFFFFFUL<<(size_val))+1;//转为负数
             tobin(DCT[j],*write_code);
             Write_Stream_To_File(write_code,fp);
 
@@ -1708,27 +1865,105 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
 /*
  * Decode all the 3 components for 1x1
  */
-static void WriteNewData_One_mcu(struct jdec_private *priv,FILE *fp)
+static void WriteNewData_decode_MCU_1x1_3planes(struct jdec_private *priv,FILE *fp)
 {
     // Y
-    WriteNewData_process_Huffman_data_unit(priv, cY,fp);//DC0,AC0,0
+    WriteNewData_process_Huffman_data_unit(priv, cY,fp);
 
     // Cb
-    WriteNewData_process_Huffman_data_unit(priv, cCb,fp);//DC1,AC1,1
+    WriteNewData_process_Huffman_data_unit(priv, cCb,fp);
 
     // Cr
-    WriteNewData_process_Huffman_data_unit(priv, cCr,fp);//DC1,AC1,2
+    WriteNewData_process_Huffman_data_unit(priv, cCr,fp);
 }
+
+
+
+/*
+ * Decode a 2x1
+ *  .-------.
+ *  | 1 | 2 |
+ *  `-------'
+ */
+static void WriteNewData_decode_MCU_2x1_3planes(struct jdec_private *priv,FILE *fp)
+{
+    // Y
+    WriteNewData_process_Huffman_data_unit(priv, cY,fp);
+    WriteNewData_process_Huffman_data_unit(priv, cY,fp);
+
+
+    // Cb
+    WriteNewData_process_Huffman_data_unit(priv, cCb,fp);
+
+    // Cr
+    WriteNewData_process_Huffman_data_unit(priv, cCr,fp);
+}
+
+
+
+/*
+ * Decode a 2x2
+ *  .-------.
+ *  | 1 | 2 |
+ *  |---+---|
+ *  | 3 | 4 |
+ *  `-------'
+ */
+static void WriteNewData_decode_MCU_2x2_3planes(struct jdec_private *priv,FILE *fp)
+{
+    // Y
+    WriteNewData_process_Huffman_data_unit(priv, cY,fp);
+    WriteNewData_process_Huffman_data_unit(priv, cY,fp);
+    WriteNewData_process_Huffman_data_unit(priv, cY,fp);
+    WriteNewData_process_Huffman_data_unit(priv, cY,fp);
+
+
+    // Cb
+    WriteNewData_process_Huffman_data_unit(priv, cCb,fp);
+
+    // Cr
+    WriteNewData_process_Huffman_data_unit(priv, cCr,fp);
+}
+
+
+/*
+ * Decode a 1x2 mcu
+ *  .---.
+ *  | 1 |
+ *  |---|
+ *  | 2 |
+ *  `---'
+ */
+static void WriteNewData_decode_MCU_1x2_3planes(struct jdec_private *priv,FILE *fp)
+{
+    // Y
+    WriteNewData_process_Huffman_data_unit(priv, cY,fp);
+    WriteNewData_process_Huffman_data_unit(priv, cY,fp);
+
+
+    // Cb
+    WriteNewData_process_Huffman_data_unit(priv, cCb,fp);
+
+    // Cr
+    WriteNewData_process_Huffman_data_unit(priv, cCr,fp);
+}
+
+static const WriteNewData_decode_MCU_fct WriteNewData_decode_mcu_3comp_table[4] = {
+        WriteNewData_decode_MCU_1x1_3planes,
+        WriteNewData_decode_MCU_1x2_3planes,
+        WriteNewData_decode_MCU_2x1_3planes,
+        WriteNewData_decode_MCU_2x2_3planes,
+};
 
 int WriteNewData_workon;
 
 int WriteNewData(struct jdec_private *priv,FILE *fp)
 {
 
-
     unsigned int x, y, xstride_by_mcu, ystride_by_mcu;
     unsigned int bytes_per_blocklines[3], bytes_per_mcu[3];
-
+    WriteNewData_decode_MCU_fct WriteNewData_decode_MCU;
+    const WriteNewData_decode_MCU_fct *WriteNewData_decode_mcu_table;
     if (setjmp(priv->jump_state))
         return -1;
 
@@ -1738,18 +1973,22 @@ int WriteNewData(struct jdec_private *priv,FILE *fp)
     bytes_per_blocklines[1] = 0;
     bytes_per_blocklines[2] = 0;
 
-
+    WriteNewData_decode_mcu_table = WriteNewData_decode_mcu_3comp_table;
     xstride_by_mcu = ystride_by_mcu = 8;
     if ((priv->component_infos[cY].Hfactor | priv->component_infos[cY].Vfactor) == 1) {
+        WriteNewData_decode_MCU = WriteNewData_decode_mcu_table[0];
         printf("Use decode 1x1 sampling\n");
     } else if (priv->component_infos[cY].Hfactor == 1) {
+        WriteNewData_decode_MCU = WriteNewData_decode_mcu_table[1];
         ystride_by_mcu = 16;
         printf("Use decode 1x2 sampling (not supported)\n");
     } else if (priv->component_infos[cY].Vfactor == 2) {
+        WriteNewData_decode_MCU = WriteNewData_decode_mcu_table[3];
         xstride_by_mcu = 16;
         ystride_by_mcu = 16;
         printf("Use decode 2x2 sampling\n");
     } else {
+        WriteNewData_decode_MCU = WriteNewData_decode_mcu_table[2];
         xstride_by_mcu = 16;
         printf("Use decode 2x1 sampling\n");
     }
@@ -1763,7 +2002,7 @@ int WriteNewData(struct jdec_private *priv,FILE *fp)
     {
         for (x=0; x < priv->width; x+=xstride_by_mcu)
         {
-            WriteNewData_One_mcu(priv,fp);
+            WriteNewData_decode_MCU(priv,fp);
 
             if (priv->restarts_to_go>0)
             {
@@ -1841,6 +2080,10 @@ void WriteNewData_convert_one_image(const char *infilename)
     temp=WriteNewData_Stream.to_ulong();//转换为long类型
     byte=temp;//转换为char类型
     fprintf(fpdat,"%c",byte);
+    if(byte==0xff){
+        byte=0x00;
+        fprintf(fp,"%c",byte);
+    }
     WriteNewData_Stream.operator<<=(8);
     WriteNewData_Stream_Bits=0;
     fclose(fpdat);
@@ -1879,6 +2122,13 @@ int main(){
 
     }
 
+
+    return 0;
+}
+
+
+
+
 //    //compare the val
 //
 //
@@ -1906,9 +2156,4 @@ int main(){
 //        printf("%2.2x ",all_val[i].val);
 //        printf("%8.8x\n",all_val[i].code);
 //    }
-    //memset(JPEGFileNameRecord, 0, sizeof(JPEGFileNameRecord));
-
-
-
-    return 0;
-}
+//memset(JPEGFileNameRecord, 0, sizeof(JPEGFileNameRecord));
