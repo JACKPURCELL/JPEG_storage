@@ -672,7 +672,7 @@ void convert_one_image(const char *infilename)
     if (jdec == NULL)
         printf("Not enough memory to alloc the structure need for decompressing\n");
     //解头部
-    if (tinyjpeg_parse_header(jdec, buf, length_of_file)<0)
+    if (tinyjpeg_parse_header(jdec, buf, length_of_file)<0)//获取sos之后
         printf(tinyjpeg_get_printfstring(jdec));
     /* Get the size of the image */
     //获得图像长宽
@@ -877,11 +877,14 @@ static int get_next_huffman_code(struct jdec_private *priv, struct huffman_table
  * Decode a single block that contains the DCT coefficients.
  *
  */
+int temptest=0;
+
 static void process_Huffman_data_unit(struct jdec_private *priv, int component)
 {
     unsigned char j;
     unsigned int huff_code;
     unsigned char size_val, count_0;
+
 
     struct component *c = &priv->component_infos[component];
     short int DCT[64];
@@ -1188,6 +1191,8 @@ int tinyjpeg_decode(struct jdec_private *priv)
         {
             decode_MCU(priv);
 
+            const unsigned char *streamtest = priv->stream;
+
             if (priv->restarts_to_go>0)
             {
                 priv->restarts_to_go--;
@@ -1459,9 +1464,11 @@ bitset<8> tail_string(HuffmanCode write_code,int bits){
     bitset<8> return_code("00000000");
     int code_size=strlen(*write_code);
     char a[1];
+
 //    for(int i=0;i<code_size;i++){
 //        printf("%c\n",(*write_code)[i]);
 //    }
+
     for(int i=0;i<bits;i++){
         a[0]= ((*write_code)[code_size - 1 - i]);
         return_code[i]= atoi(a);
@@ -1478,9 +1485,9 @@ bitset<8> WriteNewData_last_Stream("00000000");
 int WriteNewData_Stream_Bits=0;
 void Write_Stream_To_File(HuffmanCode write_code,FILE *fp){
     unsigned char byte;
-    unsigned char last_byte;
+//    unsigned char last_byte;
     unsigned long temp;
-    unsigned long last_temp;
+//    unsigned long last_temp;
     int code_bits=strlen(*write_code);
     int notwrite_code_bits=code_bits;
     bitset<8> temp_code("00000000");
@@ -1492,30 +1499,37 @@ void Write_Stream_To_File(HuffmanCode write_code,FILE *fp){
         temp=WriteNewData_Stream.to_ulong();//转换为long类型
         byte=temp;//转换为char类型
 
-        WriteNewData_last_Stream.operator<<=(4);
-        WriteNewData_last_Stream.operator|=(WriteNewData_Stream.operator>>(4));
-        last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
-        last_byte=last_temp;
-
-        if(last_byte==0xff){//出现af fa转换为af f0 0a
-            fprintf(fp,"%c",0xf0);
-            WriteNewData_last_Stream.operator<<=(8);
-            for(int i=0;i<4;i++){
-                WriteNewData_last_Stream[i]=WriteNewData_Stream[i];
-            }
-            last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
-            last_byte=last_temp;
-            fprintf(fp,"%c",last_byte);
-            WriteNewData_Stream=WriteNewData_last_Stream;
-        } else if (byte==0xff){//aa ff -> aa ff 00
+        if(byte==0xff){
             fprintf(fp,"%c",byte);
             fprintf(fp,"%c",0x00);
-            WriteNewData_Stream<<=(8);
         }else{
             fprintf(fp,"%c",byte);
         }
-
-        WriteNewData_last_Stream=WriteNewData_Stream;
+//        WriteNewData_last_Stream.operator<<=(4);
+//        WriteNewData_last_Stream.operator|=(WriteNewData_Stream.operator>>(4));
+//
+//        last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
+//        last_byte=last_temp;
+//
+//        if(last_byte==0xff){//出现af fa转换为af f0 0a
+//            fprintf(fp,"%c",0xf0);
+//            WriteNewData_last_Stream.operator<<=(8);
+//            for(int i=0;i<4;i++){
+//                WriteNewData_last_Stream[i]=WriteNewData_Stream[i];
+//            }
+//            last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
+//            last_byte=last_temp;
+//            fprintf(fp,"%c",last_byte);
+//            WriteNewData_Stream=WriteNewData_last_Stream;
+//        } else if (byte==0xff){//aa ff -> aa ff 00
+//            fprintf(fp,"%c",byte);
+//            fprintf(fp,"%c",0x00);
+//            WriteNewData_Stream<<=(8);
+//        }else{
+//            fprintf(fp,"%c",byte);
+//        }
+//
+//        WriteNewData_last_Stream=WriteNewData_Stream;
         WriteNewData_Stream.operator<<=(8);
         temp_code.operator<<=(8);
         WriteNewData_Stream_Bits=0;
@@ -1528,30 +1542,36 @@ void Write_Stream_To_File(HuffmanCode write_code,FILE *fp){
             temp=WriteNewData_Stream.to_ulong();//转换为long类型
             byte=temp;//转换为char类型
 
-            WriteNewData_last_Stream.operator<<=(4);
-            WriteNewData_last_Stream.operator|=(WriteNewData_Stream.operator>>(4));
-            last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
-            last_byte=last_temp;
-
-            if(last_byte==0xff){//出现af fa转换为af f0 0a
-                fprintf(fp,"%c",0xf0);
-                WriteNewData_last_Stream.operator<<=(8);
-                for(int i=0;i<4;i++){
-                    WriteNewData_last_Stream[i]=WriteNewData_Stream[i];
-                }
-                last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
-                last_byte=last_temp;
-                fprintf(fp,"%c",last_byte);
-                WriteNewData_Stream=WriteNewData_last_Stream;
-            } else if (byte==0xff){//aa ff -> aa ff 00
+            if(byte==0xff){
                 fprintf(fp,"%c",byte);
                 fprintf(fp,"%c",0x00);
-                WriteNewData_Stream<<=(8);
             }else{
                 fprintf(fp,"%c",byte);
             }
-
-            WriteNewData_last_Stream=WriteNewData_Stream;
+//            WriteNewData_last_Stream.operator<<=(4);
+//            WriteNewData_last_Stream.operator|=(WriteNewData_Stream.operator>>(4));
+//            last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
+//            last_byte=last_temp;
+//
+//            if(last_byte==0xff){//出现af fa转换为af f0 0a
+//                fprintf(fp,"%c",0xf0);
+//                WriteNewData_last_Stream.operator<<=(8);
+//                for(int i=0;i<4;i++){
+//                    WriteNewData_last_Stream[i]=WriteNewData_Stream[i];
+//                }
+//                last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
+//                last_byte=last_temp;
+//                fprintf(fp,"%c",last_byte);
+//                WriteNewData_Stream=WriteNewData_last_Stream;
+//            } else if (byte==0xff){//aa ff -> aa ff 00
+//                fprintf(fp,"%c",byte);
+//                fprintf(fp,"%c",0x00);
+//                WriteNewData_Stream<<=(8);
+//            }else{
+//                fprintf(fp,"%c",byte);
+//            }
+//
+//            WriteNewData_last_Stream=WriteNewData_Stream;
             WriteNewData_Stream.operator<<=(8);
             temp_code.operator<<=(8);
             WriteNewData_Stream_Bits=0;
@@ -1657,6 +1677,63 @@ static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct 
     }
     return 0;
 }
+//HuffmanCode  test_Find_New_code(int val,int type){
+//    switch (type){
+//        case 0:
+//            for(int i=0;i<256;i++){
+//                if(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[0].val==val){
+//                    return HuffmanCode(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[0].code);
+//                }
+//            }
+//            break;
+//        case 1:
+//            for(int i=0;i<256;i++){
+//                if(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[1].val==val){
+//                    return HuffmanCode(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[1].code);
+//                }
+//            }
+//            break;
+//        case 2:
+//            for(int i=0;i<256;i++){
+//                if(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[2].val==val){
+//                    return HuffmanCode(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[2].code);
+//                }
+//            }
+//            break;
+//        case 3:
+//            for(int i=0;i<256;i++){
+//                if(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[3].val==val){
+//                    return HuffmanCode(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[3].code);
+//                }
+//            }
+//            break;
+//    }
+//
+//}
+
+
+void tobin(int a,char* str){
+    if(a>=0){
+        char *p=(char*)&a,c=0,f=0,pos=-1;//p指向a的首地址
+        for(int o=0;o<4;++o){
+            for(int i=0;i<8;++i){
+                c=p[3-o]&(1<<(7-i));
+                if(!f&&!(f=c))continue;
+                str[++pos]=c?'1':'0';
+            }
+        }
+    }else{
+        a=-a;
+        char *p=(char*)&a,c=0,f=0,pos=-1;//p指向a的首地址
+        for(int o=0;o<4;++o){
+            for(int i=0;i<8;++i){
+                c=p[3-o]&(1<<(7-i));
+                if(!f&&!(f=c))continue;
+                str[++pos]=c?'0':'1';
+            }
+        }
+    }
+}
 
 HuffmanCode  Find_New_code(int val,int type){
     switch (type){
@@ -1693,28 +1770,7 @@ HuffmanCode  Find_New_code(int val,int type){
 }
 
 
-void tobin(int a,char* str){
-    if(a>=0){
-        char *p=(char*)&a,c=0,f=0,pos=-1;//p指向a的首地址
-        for(int o=0;o<4;++o){
-            for(int i=0;i<8;++i){
-                c=p[3-o]&(1<<(7-i));
-                if(!f&&!(f=c))continue;
-                str[++pos]=c?'1':'0';
-            }
-        }
-    }else{
-        a=-a;
-        char *p=(char*)&a,c=0,f=0,pos=-1;//p指向a的首地址
-        for(int o=0;o<4;++o){
-            for(int i=0;i<8;++i){
-                c=p[3-o]&(1<<(7-i));
-                if(!f&&!(f=c))continue;
-                str[++pos]=c?'0':'1';
-            }
-        }
-    }
-}
+
 
 
 static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, int component,FILE *fp)
@@ -1956,7 +2012,6 @@ static const WriteNewData_decode_MCU_fct WriteNewData_decode_mcu_3comp_table[4] 
 };
 
 int WriteNewData_workon;
-
 int WriteNewData(struct jdec_private *priv,FILE *fp)
 {
 
@@ -2003,6 +2058,7 @@ int WriteNewData(struct jdec_private *priv,FILE *fp)
         for (x=0; x < priv->width; x+=xstride_by_mcu)
         {
             WriteNewData_decode_MCU(priv,fp);
+
 
             if (priv->restarts_to_go>0)
             {
@@ -2086,6 +2142,11 @@ void WriteNewData_convert_one_image(const char *infilename)
     }
     WriteNewData_Stream.operator<<=(8);
     WriteNewData_Stream_Bits=0;
+
+    //写入ffd9
+    fprintf(fp,"%c",0xff);
+    fprintf(fp,"%c",0xd9);
+
     fclose(fpdat);
     free(buf);
 
@@ -2107,8 +2168,6 @@ int main(){
         convert_one_image(Dir_Record->dir_huff[workon].FullPathName);
     }
 
-
-//    compare();
     build_huff_val_useful();
     build_DC0_tree();
     build_DC1_tree();
@@ -2121,7 +2180,6 @@ int main(){
         WriteNewData_convert_one_image(Dir_Record->dir_huff[WriteNewData_workon].FullPathName);
 
     }
-
 
     return 0;
 }
