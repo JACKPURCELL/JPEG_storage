@@ -96,7 +96,7 @@ typedef char **HuffmanCode; // 动态分配数组存储赫夫曼编码表
 
 typedef struct {
     int val[256]={0};
-    long int num[256]={0};
+    long long num[256]={0};
     HuffmanCode code[256];
     int count=0;
 }one_hufftype;
