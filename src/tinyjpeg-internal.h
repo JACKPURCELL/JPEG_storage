@@ -125,6 +125,7 @@ typedef struct one_huff_table{
 typedef struct one_jpeg_huff{
     char FullPathName[1024];
     ONE_HUFF_TABLE jpeg_huff[4];//DC0 DC1 AC0 AC1
+    int type=0;//0:1*1 1:2*2
 }ONE_JPEG_HUFF;
 
 //one jpeg four huffman table

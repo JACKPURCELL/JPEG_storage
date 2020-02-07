@@ -56,7 +56,6 @@ static char printf_string[256];
 char *JPEGFileNameRecord[32767];
 long long JPEGFileNum=0;
 
-
 enum std_markers {
     DQT  = 0xDB, /* Define Quantization Table */
     SOF  = 0xC0, /* Start of Frame (size information) */
@@ -75,150 +74,7 @@ enum std_markers {
 
 DIR_HUFF *Dir_Record=(DIR_HUFF*)malloc(sizeof(DIR_HUFF));
 
-//use for gather all the val
-DIR_HUFF *All_record=(DIR_HUFF*)malloc(sizeof(DIR_HUFF));
 
-/*
- * 4 functions to manage the stream
- *
- *  fill_nbits: put at least nbits in the reservoir of bits.
- *              But convert any 0xff,0x00 into 0xff
- *  get_nbits: read nbits from the stream, and put it in result,
- *             bits is removed from the stream and the reservoir is filled
- *             automaticaly. The result is signed according to the number of
- *             bits.
- *  look_nbits: read nbits from the stream without marking as read.
- *  skip_nbits: read nbits from the stream but do not return the result.
- *
- * stream: current pointer in the jpeg data (read bytes per bytes)
- * nbits_in_reservoir: number of bits filled into the reservoir
- * reservoir: register that contains bits information. Only nbits_in_reservoir
- *            is valid.
- *                          nbits_in_reservoir
- *                        <--    17 bits    -->
- *            Ex: 0000 0000 1010 0000 1111 0000   <== reservoir
- *                        ^
- *                        bit 1
- *            To get two bits from this example
- *                 result = (reservoir >> 15) & 3
- *
- */
-//#define fill_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted) do { \
-//   while (nbits_in_reservoir<nbits_wanted) \
-//    { \
-//      unsigned char c; \
-//      if (stream >= priv->stream_end) \
-//        longjmp(priv->jump_state, -EIO); \
-//      c = *stream++; \
-//      reservoir <<= 8; \
-//      if (c == 0xff && *stream == 0x00) \
-//        stream++; \
-//      reservoir |= c; \
-//      nbits_in_reservoir+=8; \
-//    } \
-//}  while(0);
-//
-//void* fill_nbits(unsigned int reservoir,unsigned int nbits_in_reservoir,const unsigned char *stream,int nbits_wanted){
-//   while (nbits_in_reservoir<nbits_wanted)
-//    {
-//      unsigned char c;
-//      if (stream >= priv->stream_end)
-//        longjmp(priv->jump_state, -EIO);
-//      c = *stream++;
-//      reservoir <<= 8;
-//      if (c == 0xff && *stream == 0x00)
-//        stream++;
-//      reservoir |= c;
-//      nbits_in_reservoir+=8;
-//    }
-//}
-//
-/////* Signed version !!!! */
-////#define get_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result) do { \
-////   fill_nbits(reservoir,nbits_in_reservoir,stream,(nbits_wanted)); \
-////   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted))); \
-////   nbits_in_reservoir -= (nbits_wanted);  \
-////   reservoir &= ((1U<<nbits_in_reservoir)-1); \
-////   if ((unsigned int)result < (1UL<<((nbits_wanted)-1))) \
-////       result += (0xFFFFFFFFUL<<(nbits_wanted))+1; \
-////}  while(0);
-//
-///* Signed version !!!! */
-//static void get_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result)  {
-//    while (nbits_in_reservoir<nbits_wanted)
-//    {
-//        unsigned char c;
-//        if (stream >= priv->stream_end)
-//            longjmp(priv->jump_state, -EIO);
-//        c = *stream++;
-//        reservoir <<= 8;
-//        if (c == 0xff && *stream == 0x00)
-//            stream++;
-//        reservoir |= c;
-//        nbits_in_reservoir+=8;
-//    }
-//   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted)));
-//   nbits_in_reservoir -= (nbits_wanted);
-//   reservoir &= ((1U<<nbits_in_reservoir)-1);
-//   if ((unsigned int)result < (1UL<<((nbits_wanted)-1)))
-//       result += (0xFFFFFFFFUL<<(nbits_wanted))+1;
-//}
-//
-////#define look_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result) do { \
-////   printf("beforefill %d\n",nbits_in_reservoir);\
-////   fill_nbits(reservoir,nbits_in_reservoir,stream,(nbits_wanted)); \
-////   printf("look %d\n",nbits_in_reservoir);\
-////   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted))); \
-////   printf("result %d\n",nbits_in_reservoir);\
-////}  while(0);
-//
-//static void look_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result) do {
-//   printf("beforefill %d\n",nbits_in_reservoir);
-//   while (nbits_in_reservoir<nbits_wanted)
-//    {
-//        unsigned char c;
-//        if (stream >= priv->stream_end)
-//            longjmp(priv->jump_state, -EIO);
-//        c = *stream++;
-//        reservoir <<= 8;
-//        if (c == 0xff && *stream == 0x00)
-//            stream++;
-//        reservoir |= c;
-//        nbits_in_reservoir+=8;
-//    }
-//   printf("look %d\n",nbits_in_reservoir);
-//   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted)));
-//   printf("result %d\n",nbits_in_reservoir);
-//}
-//
-//
-////#define change_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted,result) do { \
-////   fill_nbits(reservoir,nbits_in_reservoir,stream,(nbits_wanted)); \
-////
-////   result = ((reservoir)>>(nbits_in_reservoir-(nbits_wanted))); \
-////}  while(0);
-//
-///* To speed up the decoding, we assume that the reservoir have enough bit
-// * slow version:
-// * #define skip_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted) do { \
-// *   fill_nbits(reservoir,nbits_in_reservoir,stream,(nbits_wanted)); \
-// *   nbits_in_reservoir -= (nbits_wanted); \
-// *   reservoir &= ((1U<<nbits_in_reservoir)-1); \
-// * }  while(0);
-// */
-////#define skip_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted) do { \
-////   nbits_in_reservoir -= (nbits_wanted); \
-////   printf("skip1 %d\n",nbits_in_reservoir);\
-////   reservoir &= ((1U<<nbits_in_reservoir)-1); \
-////      printf("skip2 %d\n",nbits_in_reservoir);\
-////}  while(0);
-//
-//static void skip_nbits(reservoir,nbits_in_reservoir,stream,nbits_wanted){
-//   nbits_in_reservoir -= (nbits_wanted);
-//   printf("skip1 %d\n",nbits_in_reservoir);
-//   reservoir &= ((1U<<nbits_in_reservoir)-1);
-//   printf("skip2 %d\n",nbits_in_reservoir);
-//}
 
 long long workon=0;
 
@@ -245,7 +101,7 @@ static int find_next_rst_marker(struct jdec_private *priv)
         if ((RST+priv->last_rst_marker_seen) == marker)
             rst_marker_found = 1;
         else if (marker >= RST && marker <= RST7)
-            printf("Wrong Reset marker found, abording");
+            printf("Wrong Reset marker found, abording\n");
         else if (marker == EOI)
             return 0;
     }
@@ -317,7 +173,7 @@ static void build_huffman_table(const unsigned char *bits, const unsigned char *
         Dir_Record->dir_huff[workon].jpeg_huff[type].huff_table[workonnum].code=huffcode[i];
         Dir_Record->dir_huff[workon].jpeg_huff[type].huff_table[workonnum].code_size=huffsize[i];
         Dir_Record->dir_huff[workon].jpeg_huff[type].one_huff_num++;
-        printf("val=%2.2x,code=%8.8x,codesize=%2.2d\n", val, code, code_size);
+//        printf("val=%2.2x,code=%8.8x,codesize=%2.2d\n", val, code, code_size);
 
 
         table->code_size[val] = code_size;
@@ -367,7 +223,7 @@ static int parse_DHT(struct jdec_private *priv, const unsigned char *stream)
     unsigned int count, i,j;
     unsigned char huff_bits[17];
     int length, index;
-    printf("start: DHT marker\n");
+//    printf("start: DHT marker\n");
 
     //------------------------------------------
     char *temp;
@@ -384,19 +240,11 @@ static int parse_DHT(struct jdec_private *priv, const unsigned char *stream)
         char temp_str1[100]={0};
         char temp_str2[100]={0};
         temp=(char *)stream;
-        //fp = fopen("DHT.txt", "a+");
-        //fwrite(temp, 16, 1, fp);
         for(j=0;j<16;j++){
-            //fprintf(fp,"%d ",temp[j]);
             sprintf(temp_str2,"%02d ",temp[j]);
             strcat(temp_str1,temp_str2);
         }
-        //fprintf(fp,"\n-----------------------\n");
-        //fclose(fp);
-        //-----------------------------------------------------
-
-        //printf("DHT %s","定义霍夫曼表【交流系数表】%s",temp_str1,"Huffman表ID号和类型：1字节，高4位为表的类型，0：DC直流；1：AC交流 可以看出这里是直流表；低四位为Huffman表ID");
-        printf("%s\n",temp_str1);
+//        printf("%s\n",temp_str1);
 
 
 
@@ -429,10 +277,10 @@ static int parse_DHT(struct jdec_private *priv, const unsigned char *stream)
 
         if (index & 0xf0 )
         {
-            printf("%d\n",type);
+//            printf("%d\n",type);
             build_huffman_table(huff_bits, stream, &priv->HTAC[index&0xf],type);
         }else{
-            printf("%d\n",type);
+//            printf("%d\n",type);
             build_huffman_table(huff_bits, stream, &priv->HTDC[index&0xf],type);
         }
 
@@ -441,7 +289,7 @@ static int parse_DHT(struct jdec_private *priv, const unsigned char *stream)
         length -= count;
         stream += count;
     }
-    printf("end: DHT marker\n");
+//    printf("end: DHT marker\n");
     return 0;
 }
 
@@ -478,11 +326,12 @@ static void print_SOF(const unsigned char *stream)
     width  = be16_to_cpu(stream+5);
     nr_components = stream[7];
 
-    printf("start: SOF marker\n");
-    printf("Size:%dx%d nr_components:%d  precision:%d\n",
-          width, height,
-          nr_components,
-          precision);
+//    printf("start: SOF marker\n");
+//    printf("Size:%dx%d nr_components:%d  precision:%d\n",
+//           width, height,
+//           nr_components,
+//           precision);
+
 }
 
 static int parse_SOF(struct jdec_private *priv, const unsigned char *stream)
@@ -507,14 +356,14 @@ static int parse_SOF(struct jdec_private *priv, const unsigned char *stream)
         c->Vfactor = sampling_factor&0xf;
         c->Hfactor = sampling_factor>>4;
         c->Q_table = priv->Q_tables[Q_table];
-        printf("Component:%d  factor:%dx%d  Quantization table:%d\n",
-              cid, c->Hfactor, c->Hfactor, Q_table );
+//        printf("Component:%d  factor:%dx%d  Quantization table:%d\n",
+//               cid, c->Hfactor, c->Hfactor, Q_table );
 
     }
     priv->width = width;
     priv->height = height;
 
-    printf("end: SOF marker\n");
+//    printf("end: SOF marker\n");
 
     return 0;
 }
@@ -525,7 +374,7 @@ static int parse_SOS(struct jdec_private *priv, const unsigned char *stream)
     unsigned int i, cid, table;
     unsigned int nr_components = stream[2];
 
-    printf("start: SOS marker\n");
+//    printf("start: SOS marker\n");
 
 #if SANITY_CHECK
     if (nr_components != 3)
@@ -550,7 +399,7 @@ static int parse_SOS(struct jdec_private *priv, const unsigned char *stream)
         priv->component_infos[i].DC_table = &priv->HTDC[table>>4];
     }
     priv->stream = stream+3;
-    printf("end: SOS marker\n");
+//    printf("end: SOS marker\n");
     return 0;
 }
 
@@ -563,7 +412,7 @@ static int parse_JFIF(struct jdec_private *priv, const unsigned char *stream)
     int sos_marker_found = 0;
     int dht_marker_found = 0;
     const unsigned char *next_chunck;
-int count=0;
+    int count=0;
     /* Parse marker */
     //在Start of scan标签之前
     while (!sos_marker_found)
@@ -674,7 +523,7 @@ void convert_one_image(const char *infilename)
     /* Load the Jpeg into memory */
     fp = fopen(infilename, "rb");
     if (fp == NULL)
-       { printf("Cannot open filename\n");
+    { printf("Cannot open filename\n");
         exit(1);}
     length_of_file = filesize(fp);
     buf = (unsigned char *)malloc(length_of_file + 4);
@@ -732,13 +581,13 @@ int readFileList(char *basePath,FILE* picname)
             namelen = strlen(ptr->d_name);if(ptr->d_name[namelen-4] == '.' && ( ptr->d_name[namelen-3] == 'j' || ptr->d_name[namelen-3] == 'J' ) && ( ptr->d_name[namelen-2] == 'p' || ptr->d_name[namelen-2] == 'P' ) && ( ptr->d_name[namelen-1] == 'g' || ptr->d_name[namelen-1] == 'G' ))    ///jpgfile
             {
                 //ptr->d_name[namelen-4] = '\0';
-            //    JPEGFileNameRecord[JPEGFileNum]=(char *)malloc(100*sizeof(char));
+                //    JPEGFileNameRecord[JPEGFileNum]=(char *)malloc(100*sizeof(char));
                 char TempRecord[1000];
                 memset(TempRecord, '\0', sizeof(TempRecord));
                 strcat(TempRecord,basePath);
                 strcat(TempRecord,"/");
                 strcat(TempRecord,ptr->d_name);
-               // strcpy(JPEGFileNameRecord[JPEGFileNum],TempRecord);
+                // strcpy(JPEGFileNameRecord[JPEGFileNum],TempRecord);
 
 //                strcpy(JPEGFileNameRecord[JPEGFileNum++],ptr->d_name);
                 //printf("%s\n",JPEGFileNameRecord[JPEGFileNum]);
@@ -917,20 +766,20 @@ static void process_Huffman_data_unit(struct jdec_private *priv, int component)
     huff_code = get_next_huffman_code(priv, c->DC_table);//返回val
 //    if(huff_code!=0)
 
-        switch (component){
-            case 0:
-                huff_val.DC0[huff_code]++;
-                //printf("DC0 %02x\n", huff_code);//val
-                break;
-            case 1:
-                huff_val.DC1[huff_code]++;
-                //printf("DC1 %02x\n", huff_code);//val
-                break;
-            case 2:
-                huff_val.DC1[huff_code]++;
-                //printf("DC1 %02x\n", huff_code);//val
-                break;
-        }
+    switch (component){
+        case 0:
+            huff_val.DC0[huff_code]++;
+            //printf("DC0 %02x\n", huff_code);//val
+            break;
+        case 1:
+            huff_val.DC1[huff_code]++;
+            //printf("DC1 %02x\n", huff_code);//val
+            break;
+        case 2:
+            huff_val.DC1[huff_code]++;
+            //printf("DC1 %02x\n", huff_code);//val
+            break;
+    }
 
     if (huff_code) {
 //        get_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, huff_code, DCT[0]);//读huff_code个数据
@@ -1193,15 +1042,22 @@ int tinyjpeg_decode(struct jdec_private *priv)
         decode_MCU = decode_mcu_table[1];
         ystride_by_mcu = 16;
         printf("Use decode 1x2 sampling (not supported)\n");
+        printf("Not supported now!!!!!!!!\n");
+        exit(0);
     } else if (priv->component_infos[cY].Vfactor == 2) {
         decode_MCU = decode_mcu_table[3];
         xstride_by_mcu = 16;
         ystride_by_mcu = 16;
         printf("Use decode 2x2 sampling\n");
+        Dir_Record->dir_huff[workon].type=1;
+        printf("Not supported now!!!!!!!!\n");
+        exit(0);
     } else {
         decode_MCU = decode_mcu_table[2];
         xstride_by_mcu = 16;
         printf("Use decode 2x1 sampling\n");
+        printf("Not supported now!!!!!!!!\n");
+        exit(0);
     }
 
     resync(priv);
@@ -1239,24 +1095,6 @@ int tinyjpeg_decode(struct jdec_private *priv)
 
 
 
-void compare(){
-    long int count=0;
-    long int temp=0;
-    int i=0,j=0;
-    for(i=0;i<256;i++){//对于一个code
-        temp=0;
-        for(j=0;j<Dir_Record->dir_huff[0].jpeg_huff[3].one_huff_num;j++){
-            if(i==Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[j].val) {
-                temp = Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[j].code_size;
-                break;
-            }
-        }
-        count+=(huff_val.AC1[i]*temp);
-    }
-
-    printf("%ld\n",count);
-}
-
 //____________________________________________________________
 
 #include <climits>
@@ -1272,42 +1110,43 @@ void build_huff_val_useful_test(){
     int a=0,b=0,c=0,d=0;
 
     for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[0].one_huff_num;i++) {
-            huff_val_useful->DC0.val[a] = Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[i].val;
-            huff_val_useful->DC0.code[a] = (char *) malloc(sizeof(char) * 3);
-            strcpy(huff_val_useful->DC0.code[a], tobin(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[i].code));
-            a++;
-            huff_val_useful->DC0.count = a;
+        huff_val_useful->DC0.val[a] = Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[i].val;
+        huff_val_useful->DC0.code[a] = (char*)malloc(sizeof(char)*32);
+        strcpy(huff_val_useful->DC0.code[a], tobin(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[i].code));
+        a++;
+        huff_val_useful->DC0.count = a;
     }
     for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[1].one_huff_num;i++) {
-            huff_val_useful->DC1.val[b] = Dir_Record->dir_huff[0].jpeg_huff[1].huff_table[i].val;
-            huff_val_useful->DC1.code[b] = (char *) malloc(sizeof(char) * 3);
-            strcpy(huff_val_useful->DC1.code[b], tobin(Dir_Record->dir_huff[0].jpeg_huff[1].huff_table[i].code));
-            b++;
-            huff_val_useful->DC1.count = b;
+        huff_val_useful->DC1.val[b] = Dir_Record->dir_huff[0].jpeg_huff[1].huff_table[i].val;
+        huff_val_useful->DC1.code[b] = (char*)malloc(sizeof(char)*32);
+        strcpy(huff_val_useful->DC1.code[b], tobin(Dir_Record->dir_huff[0].jpeg_huff[1].huff_table[i].code));
+        b++;
+        huff_val_useful->DC1.count = b;
     }
     for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[2].one_huff_num;i++) {
-            huff_val_useful->AC0.val[c] = Dir_Record->dir_huff[0].jpeg_huff[2].huff_table[i].val;
-            huff_val_useful->AC0.code[c] = (char *) malloc(sizeof(char) * 3);
-            strcpy(huff_val_useful->AC0.code[c], tobin(Dir_Record->dir_huff[0].jpeg_huff[2].huff_table[i].code));
-            c++;
-            huff_val_useful->AC0.count = c;
+        huff_val_useful->AC0.val[c] = Dir_Record->dir_huff[0].jpeg_huff[2].huff_table[i].val;
+        huff_val_useful->AC0.code[c] = (char*)malloc(sizeof(char)*32);
+        strcpy(huff_val_useful->AC0.code[c], tobin(Dir_Record->dir_huff[0].jpeg_huff[2].huff_table[i].code));
+        c++;
+        huff_val_useful->AC0.count = c;
     }
     for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[3].one_huff_num;i++) {
-            huff_val_useful->AC1.val[d]=Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[i].val;
-            huff_val_useful->AC1.code[d]=(char*)malloc(sizeof(char)*32);
-            strcpy(huff_val_useful->AC1.code[d],tobin(Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[i].code));
-            d++;
-            huff_val_useful->AC1.count=d;
+        huff_val_useful->AC1.val[d]=Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[i].val;
+        huff_val_useful->AC1.code[d]=(char*)malloc(sizeof(char)*32);
+        strcpy(huff_val_useful->AC1.code[d],tobin(Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[i].code));
+        d++;
+        huff_val_useful->AC1.count=d;
     }
     strcpy(huff_val_useful->DC0.code[0],"00");
     strcpy(huff_val_useful->DC0.code[1],"010");
     strcpy(huff_val_useful->DC0.code[2],"011");
     strcpy(huff_val_useful->DC1.code[0],"00");
     strcpy(huff_val_useful->DC1.code[1],"01");
+    strcpy(huff_val_useful->DC1.code[2],"10");
     strcpy(huff_val_useful->AC0.code[0],"00");
     strcpy(huff_val_useful->AC0.code[1],"01");
-    strcpy(huff_val_useful->AC1.code[0],"0");
-
+    strcpy(huff_val_useful->AC1.code[0],"00");
+    strcpy(huff_val_useful->AC1.code[1],"01");
 
 
 
@@ -1374,7 +1213,7 @@ void cal_new_huffman(char* arr[],int length){
 
     long long huffcode=1;
     int huffcode_length=3;
-    int one_size_max[17]={0,0,2,1,3,3,2,4,2,7,4,8,4,4,2,1,256};
+    int one_size_max[17]={0,0,2,1,3,3,2,4,2,7,4,8,4,1,1,1,256};
     int size=2;
     int size_num=2;
     strcpy(arr[0],"00");
@@ -1383,13 +1222,32 @@ void cal_new_huffman(char* arr[],int length){
     char* str;
     str=(char*)malloc(sizeof(char)*32);
 
+//    for(int i=2;i<length;i++){
+//        if(size_num<one_size_max[size]){
+//            if(size_num!=0){
+//                huffcode++;
+//            }
+//            strcpy(str,"");
+//            strcpy(str,tobin(huffcode));
+//            strcpy(arr[i],str);
+//            size_num++;
+//        } else{//超过当前数量
+//            size_num=0;
+//            size++;
+//            huffcode++;
+//            huffcode*=2;
+//            i--;
+//        }
+//
+//    }
+
 
     for(int i=2;i<length;i++){
         if(size_num<one_size_max[size]){
             huffcode++;
             strcpy(str,"");
             strcpy(str,tobin(huffcode));
-        } else{
+        } else{//超过当前数量
             size_num=0;
             size++;
             huffcode++;
@@ -1472,89 +1330,6 @@ void build_AC1_tree(){
     }
 }
 
-//void build_DC0_tree(){
-//    printf("DC0\n");
-//    HuffmanTree HT;
-//    HuffmanCode HC;
-//    int *w,n,i;
-//
-//    n=huff_val_useful->DC0.count;
-//    w=(int*)malloc(n*sizeof(int));
-//    for(i=0;i<n;i++)
-//        *(w+i) = huff_val_useful->DC0.num[i];
-//
-//    HuffmanCoding(HT,HC,w,n);
-//    for(i=1;i<=n;i++){
-//        printf("%02x,%s\n",huff_val_useful->DC0.val[i-1],HC[i]);
-//        huff_val_useful->DC0.code[i-1]= & HC[i];
-////        printf("%s\n",*huff_val_useful->DC0.code[i-1]);
-//    }
-//}
-//
-//void build_DC1_tree(){
-//    printf("DC1\n");
-//    HuffmanTree HT;
-//    HuffmanCode HC;
-//    int *w,n,i;
-//
-//    n=huff_val_useful->DC1.count;
-//
-//    w=(int*)malloc(n*sizeof(int));
-//    for(i=0;i<n;i++)
-//        *(w+i) = huff_val_useful->DC1.num[i];
-//
-//    HuffmanCoding(HT,HC,w,n);
-//    for(i=1;i<=n;i++){
-//        printf("%02x,%s\n",huff_val_useful->DC1.val[i-1],HC[i]);
-//        huff_val_useful->DC1.code[i-1]= & HC[i];
-//    }
-//}
-//
-//void build_AC0_tree(){
-//    printf("AC0\n");
-//    HuffmanTree HT;
-//    HuffmanCode HC;
-//    int *w,n,i;
-//
-//    n=huff_val_useful->AC0.count;
-//    for(int j=0;j<n;j++){
-//        if(huff_val_useful->AC0.num[j]<((huff_val_useful->AC0.num[1])*0.0001)){//避免code太长
-//            huff_val_useful->AC0.num[j]+=((huff_val_useful->AC0.num[1])*0.0001);
-//        }
-//    }
-//    w=(int*)malloc(n*sizeof(int));
-//    for(i=0;i<n;i++)
-//        *(w+i) = huff_val_useful->AC0.num[i];
-//
-//    HuffmanCoding(HT,HC,w,n);
-//    for(i=1;i<=n;i++){
-//        printf("%02x,%s,%d\n",huff_val_useful->AC0.val[i-1],HC[i], strlen(HC[i]));
-//        huff_val_useful->AC0.code[i-1]= & HC[i];
-//    }
-//}
-//
-//void build_AC1_tree(){
-//    printf("AC1\n");
-//    HuffmanTree HT;
-//    HuffmanCode HC;
-//    int *w,n,i;
-//
-//    n=huff_val_useful->AC1.count;
-//    for(int j=0;j<n;j++){
-//        if(huff_val_useful->AC1.num[j]<((huff_val_useful->AC1.num[1])*0.0001)){
-//            huff_val_useful->AC1.num[j]+=((huff_val_useful->AC1.num[1])*0.0001);
-//        }
-//    }
-//    w=(int*)malloc(n*sizeof(int));
-//    for(i=0;i<n;i++)
-//        *(w+i) = huff_val_useful->AC1.num[i];
-//
-//    HuffmanCoding(HT,HC,w,n);
-//    for(i=1;i<=n;i++){
-//        printf("%02x,%s,%d\n",huff_val_useful->AC1.val[i-1],HC[i],strlen(HC[i]));
-//        huff_val_useful->AC1.code[i-1]= & HC[i];
-//    }
-//}
 
 //__________________________________________________________
 
@@ -1625,6 +1400,7 @@ void Write_Stream_To_File(char* write_code,FILE *fp){
     unsigned long temp;
 //    unsigned long last_temp;
     int code_bits=strlen(write_code);
+
     int notwrite_code_bits=code_bits;
     bitset<8> temp_code("00000000");
     if(code_bits>(8-WriteNewData_Stream_Bits)){//不能塞下，则先补满
@@ -1777,39 +1553,7 @@ static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct 
     }
     return 0;
 }
-//HuffmanCode  test_Find_New_code(int val,int type){
-//    switch (type){
-//        case 0:
-//            for(int i=0;i<256;i++){
-//                if(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[0].val==val){
-//                    return HuffmanCode(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[0].code);
-//                }
-//            }
-//            break;
-//        case 1:
-//            for(int i=0;i<256;i++){
-//                if(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[1].val==val){
-//                    return HuffmanCode(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[1].code);
-//                }
-//            }
-//            break;
-//        case 2:
-//            for(int i=0;i<256;i++){
-//                if(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[2].val==val){
-//                    return HuffmanCode(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[2].code);
-//                }
-//            }
-//            break;
-//        case 3:
-//            for(int i=0;i<256;i++){
-//                if(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[3].val==val){
-//                    return HuffmanCode(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[3].code);
-//                }
-//            }
-//            break;
-//    }
-//
-//}
+
 
 char* itoa (long long n)
 {
@@ -1819,9 +1563,9 @@ char* itoa (long long n)
     i=0;
     char *s;
     char *str;
-    s=(char *)malloc(sizeof(char)*32);
+    s=(char*)malloc(sizeof(char)*32);
 
-    str=(char *)malloc(sizeof(char)*32);
+    str=(char*)malloc(sizeof(char)*32);
     do{
         s[i++]=n%10+'0';//取下一个数字
     }
@@ -1860,28 +1604,6 @@ char* tobin(long long n)
 
 }
 
-//void tobin(int a,char* str){
-//    if(a>=0){
-//        char *p=(char*)&a,c=0,f=0,pos=-1;//p指向a的首地址
-//        for(int o=0;o<4;++o){ f
-//            for(int i=0;i<8;++i){
-//                c=p[3-o]&(1<<(7-i));
-//                if(!f&&!(f=c))continue;
-//                str[++pos]=c?'1':'0';
-//            }
-//        }
-//    }else{
-//        a=-a;
-//        char *p=(char*)&a,c=0,f=0,pos=-1;//p指向a的首地址
-//        for(int o=0;o<4;++o){
-//            for(int i=0;i<8;++i){
-//                c=p[3-o]&(1<<(7-i));
-//                if(!f&&!(f=c))continue;
-//                str[++pos]=c?'0':'1';
-//            }
-//        }
-//    }
-//}
 
 char*  Find_New_code(int val,int type){
     switch (type){
@@ -1937,7 +1659,7 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
 
     char* write_code;
 
-    write_code=(char*)malloc(sizeof(char)*32);
+    write_code=(char*)malloc(sizeof(char)*16);
 
     /* DC coefficient decoding */
     huff_code = WriteNewData_get_next_huffman_code(priv, c->DC_table,fp);
@@ -1962,12 +1684,6 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
     }
     Write_Stream_To_File(write_code,fp);
 
-//    fwrite(*write_code,sizeof(write_code),1,fp);
-//    fclose(fp);
-//    fprintf(fp,"%s\n",path);
-
-//    (*write_code,fp);
-//    fwrite(write_code,sizeof(write_code),1,fp);
 
     if (huff_code) {
 //        get_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, huff_code, DCT[0]);//再读huffman个
@@ -2246,17 +1962,28 @@ static int Write_RST(struct jdec_private *priv,FILE *fp)
 int WriteNewData_workon;
 int WriteNewData(struct jdec_private *priv,FILE *fp)
 {
+    printf("Write New Data Start!\n");
     fprintf(fp,"%c",0xff);
     fprintf(fp,"%c",0xda);
     fprintf(fp,"%c",0x00);
     fprintf(fp,"%c",0x0c);
     fprintf(fp,"%c",0x03);
-    fprintf(fp,"%c",0x00);
-    fprintf(fp,"%c",0x00);
-    fprintf(fp,"%c",0x01);
-    fprintf(fp,"%c",0x11);
-    fprintf(fp,"%c",0x02);
-    fprintf(fp,"%c",0x11);
+    if(Dir_Record->dir_huff[WriteNewData_workon].type==0){
+        fprintf(fp,"%c",0x00);
+        fprintf(fp,"%c",0x00);
+        fprintf(fp,"%c",0x01);
+        fprintf(fp,"%c",0x11);
+        fprintf(fp,"%c",0x02);
+        fprintf(fp,"%c",0x11);
+   } else{
+        fprintf(fp,"%c",0x01);
+        fprintf(fp,"%c",0x00);
+        fprintf(fp,"%c",0x02);
+        fprintf(fp,"%c",0x11);
+        fprintf(fp,"%c",0x03);
+        fprintf(fp,"%c",0x11);
+    }
+
     fprintf(fp,"%c",0x00);
     fprintf(fp,"%c",0x3f);
     fprintf(fp,"%c",0x00);
@@ -2273,7 +2000,6 @@ int WriteNewData(struct jdec_private *priv,FILE *fp)
     bytes_per_mcu[2] = 0;
     bytes_per_blocklines[1] = 0;
     bytes_per_blocklines[2] = 0;
-
     WriteNewData_decode_mcu_table = WriteNewData_decode_mcu_3comp_table;
     xstride_by_mcu = ystride_by_mcu = 8;
     if ((priv->component_infos[cY].Hfactor | priv->component_infos[cY].Vfactor) == 1) {
@@ -2367,7 +2093,7 @@ void WriteNewData_convert_one_image(const char *infilename)
     char path[1000];
     memset(path, '\0', sizeof(path));
     strcpy(path,Dir_Record->dir_huff[WriteNewData_workon].FullPathName);
-    strcat(path,".dat");
+    strcat(path,".jpg");
     FILE *fpdat=fopen(path,"w+");
 
     write_head_data(infilename,fpdat);
@@ -2438,14 +2164,22 @@ void Write_Huffman_Table(FILE *fp){
 
 
     char* str;
-    str=(char*)malloc(sizeof(str)*3);
+    str=(char*)malloc(sizeof(str)*32);
 //    fprintf(fp,"%c",0xff);
 //    fprintf(fp,"%c",0xc4);
     fprintf(fp,"%c",0x00);
-    int table_length=70+huff_val_useful->DC0.count+huff_val_useful->DC1.count+huff_val_useful->AC0.count+huff_val_useful->AC1.count;
-    strcpy(str,"");
-    strcpy(str,tobin(table_length));
-    Write_One_Huffman_Table(str,fp);
+    if(Dir_Record->dir_huff[WriteNewData_workon].type==0){
+        int table_length=70+huff_val_useful->DC0.count+huff_val_useful->DC1.count+huff_val_useful->AC0.count+huff_val_useful->AC1.count;
+        strcpy(str,"");
+        strcpy(str,tobin(table_length));
+        Write_One_Huffman_Table(str,fp);
+    } else{
+        int table_length=19+huff_val_useful->DC0.count;
+        strcpy(str,"");
+        strcpy(str,tobin(table_length));
+        Write_One_Huffman_Table(str,fp);
+    }
+
 
 
     long long count[17];
@@ -2479,6 +2213,52 @@ void Write_Huffman_Table(FILE *fp){
 
 
 
+    if(Dir_Record->dir_huff[WriteNewData_workon].type==1){
+        fprintf(fp,"%c",0xff);
+        fprintf(fp,"%c",0xc4);
+        fprintf(fp,"%c",0x00);
+        int table_length=19+huff_val_useful->AC0.count;
+        strcpy(str,"");
+        strcpy(str,tobin(table_length));
+        Write_One_Huffman_Table(str,fp);
+    }
+    //AC0
+    memset(count,0, sizeof(count));
+    fprintf(fp,"%c",0x10);
+    for(int i=1;i<17;i++){
+        for(int j=0;j<huff_val_useful->AC0.count;j++){
+            if(strlen(huff_val_useful->AC0.code[j])==i){
+                count[i]++;
+            }
+        }
+        WriteNewData_Stream.operator<<=(8);
+        WriteNewData_Stream_Bits=0;
+        strcpy(str,"");
+        strcpy(str,tobin(count[i]));
+        Write_One_Huffman_Table(str,fp);
+    }
+    for(int i=0;i<huff_val_useful->AC0.count;i++){
+        WriteNewData_Stream.operator<<=(8);
+        WriteNewData_Stream_Bits=0;
+        strcpy(str,"");
+        strcpy(str,tobin(huff_val_useful->AC0.val[i]));
+        Write_One_Huffman_Table(str,fp);
+        WriteNewData_Stream.operator<<=(8);
+        WriteNewData_Stream_Bits=0;
+    }
+
+
+
+    if(Dir_Record->dir_huff[WriteNewData_workon].type==1){
+        fprintf(fp,"%c",0xff);
+        fprintf(fp,"%c",0xc4);
+        fprintf(fp,"%c",0x00);
+        int table_length=19+huff_val_useful->DC1.count;
+        strcpy(str,"");
+        strcpy(str,tobin(table_length));
+        Write_One_Huffman_Table(str,fp);
+    }
+
     //DC1
     memset(count,0, sizeof(count));
     fprintf(fp,"%c",0x01);
@@ -2505,31 +2285,18 @@ void Write_Huffman_Table(FILE *fp){
         WriteNewData_Stream_Bits=0;
     }
 
-    //AC0
-    memset(count,0, sizeof(count));
-    fprintf(fp,"%c",0x10);
-    for(int i=1;i<17;i++){
-        for(int j=0;j<huff_val_useful->AC0.count;j++){
-            if(strlen(huff_val_useful->AC0.code[j])==i){
-                count[i]++;
-            }
-        }
-        WriteNewData_Stream.operator<<=(8);
-        WriteNewData_Stream_Bits=0;
-        strcpy(str,"");
-        strcpy(str,tobin(count[i]));
-        Write_One_Huffman_Table(str,fp);
-    }
-    for(int i=0;i<huff_val_useful->AC0.count;i++){
-        WriteNewData_Stream.operator<<=(8);
-        WriteNewData_Stream_Bits=0;
-        strcpy(str,"");
-        strcpy(str,tobin(huff_val_useful->AC0.val[i]));
-        Write_One_Huffman_Table(str,fp);
-        WriteNewData_Stream.operator<<=(8);
-        WriteNewData_Stream_Bits=0;
-    }
 
+
+
+
+    if(Dir_Record->dir_huff[WriteNewData_workon].type==1){
+        fprintf(fp,"%c",0xff);
+        fprintf(fp,"%c",0xc4);
+        int table_length=19+huff_val_useful->AC1.count;
+        strcpy(str,"");
+        strcpy(str,tobin(table_length));
+        Write_One_Huffman_Table(str,fp);
+    }
     //AC1
     memset(count,0, sizeof(count));
     fprintf(fp,"%c",0x11);
@@ -2601,7 +2368,7 @@ static int Witeheaddata_parse_JFIF(struct jdec_private *priv, const unsigned cha
         //各种不同的标签
         switch (marker)
         {
-                //Define Huffman table
+            //Define Huffman table
             case DHT:
                 flag=1;
                 break;
@@ -2740,7 +2507,7 @@ int main(){
     //get all the huffman table
     for(workon=0;workon<JPEGFileNum;workon++){
 
-      //  char *fp="/Users/ljc/摄影照片LJC_0282.jpg";
+        //  char *fp="/Users/ljc/摄影照片LJC_0282.jpg";
         //strcpy(fp,strcat("/Users/ljc/摄影照片",JPEGFileNameRecord[i]));
         printf("\n%s\n",Dir_Record->dir_huff[workon].FullPathName);
         convert_one_image(Dir_Record->dir_huff[workon].FullPathName);
@@ -2765,32 +2532,3 @@ int main(){
 
 
 
-//    //compare the val
-//
-//
-//    ONE_HUFF all_val[256];
-//
-//    for(int i=0;i<256;i++){
-//        all_val[i].val=i;
-//        all_val[i].code=0;
-//        all_val[i].code_size=0;
-//    }
-//
-//    for(int i=0;i<JPEGFileNum;i++){
-//        for(int j=0;j<1;j++) {
-//            int max_code=0;
-//            int temp=Dir_Record->dir_huff[i].jpeg_huff[j].one_huff_num;
-//            for(int k=0;k<temp;k++){
-//                int temp_val=Dir_Record->dir_huff[i].jpeg_huff[j].huff_table[k].val;
-//                int temp_code=Dir_Record->dir_huff[i].jpeg_huff[j].huff_table[k].code;
-//                if(max_code<=temp_code) max_code=temp_code;
-//                all_val[temp_val].code+=temp_code;
-//            }
-//        }
-//    }
-//    for(int i=0;i<256;i++){
-//        printf("%2.2x ",all_val[i].val);
-//        printf("%8.8x\n",all_val[i].code);
-//    }
-//memset(JPEGFileNameRecord, 0, sizeof(JPEGFileNameRecord));
-//memset(JPEGFileNameRecord, 0, sizeof(JPEGFileNameRecord));
