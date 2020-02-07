@@ -33,7 +33,7 @@ using namespace std;
 #define __likely(x)       (x)
 #define __unlikely(x)     (x)
 #endif
-void tobin(long long n,char*str);
+char* tobin(long long n);
 void write_head_data(const char *infilename,FILE*fpdat);
 
 typedef void (*decode_MCU_fct) (struct jdec_private *priv);
@@ -1262,77 +1262,8 @@ void compare(){
 #include <climits>
 #include <bitset>
 
-int min(HuffmanTree t,int i)
-{ // 函数void select()调用
-    int j,flag;
-    unsigned int k=UINT_MAX; // 取k为不小于可能的值
-    for(j=1;j<=i;j++)
-        if(t[j].weight<k&&t[j].parent==0)
-            k=t[j].weight,flag=j;
-    t[flag].parent=1;
-    return flag;
-}
 
-void select(HuffmanTree t,int i,int &s1,int &s2)
-{ // s1为最小的两个值中序号小的那个
-    int j;
-    s1=min(t,i);
-    s2=min(t,i);
-    if(s1>s2)
-    {
-        j=s1;
-        s1=s2;
-        s2=j;
-    }
-}
 
-void HuffmanCoding(HuffmanTree &HT,HuffmanCode &HC,int *w,int n) // 算法6.12
-{ // w存放n个字符的权值(均>0),构造赫夫曼树HT,并求出n个字符的赫夫曼编码HC
-    int m,i,s1,s2,start;
-    unsigned c,f;
-    HuffmanTree p;
-    char *cd;
-    if(n<=1)
-        return;
-    m=2*n-1;
-    HT=(HuffmanTree)malloc((m+1)*sizeof(HTNode)); // 0号单元未用
-    for(p=HT+1,i=1;i<=n;++i,++p,++w)
-    {
-        (*p).weight=*w;
-        (*p).parent=0;
-        (*p).lchild=0;
-        (*p).rchild=0;
-    }
-    for(;i<=m;++i,++p)
-        (*p).parent=0;
-    for(i=n+1;i<=m;++i) // 建赫夫曼树
-    { // 在HT[1~i-1]中选择parent为0且weight最小的两个结点,其序号分别为s1和s2
-        select(HT,i-1,s1,s2);
-        HT[s1].parent=HT[s2].parent=i;
-        HT[i].lchild=s1;
-        HT[i].rchild=s2;
-        HT[i].weight=HT[s1].weight+HT[s2].weight;
-    }
-    // 从叶子到根逆向求每个字符的赫夫曼编码
-    HC=(HuffmanCode)malloc((n+1)*sizeof(char*));
-    // 分配n个字符编码的头指针向量([0]不用)
-    cd=(char*)malloc(n*sizeof(char)); // 分配求编码的工作空间
-    cd[n-1]='\0'; // 编码结束符
-    for(i=1;i<=n;i++)
-    { // 逐个字符求赫夫曼编码
-        start=n-1; // 编码结束符位置
-        for(c=i,f=HT[i].parent;f!=0;c=f,f=HT[f].parent)
-            // 从叶子到根逆向求编码
-            if(HT[f].lchild==c)
-                cd[--start]='0';
-            else
-                cd[--start]='1';
-        HC[i]=(char*)malloc((n-start)*sizeof(char));
-        // 为第i个字符编码分配空间
-        strcpy(HC[i],&cd[start]); // 从cd复制编码(串)到HC
-    }
-    free(cd); // 释放工作空间
-}
 
 
 HUFF_VAL_USEFUL *huff_val_useful=(HUFF_VAL_USEFUL*)malloc(sizeof(HUFF_VAL_USEFUL));
@@ -1340,45 +1271,50 @@ HUFF_VAL_USEFUL *huff_val_useful=(HUFF_VAL_USEFUL*)malloc(sizeof(HUFF_VAL_USEFUL
 void build_huff_val_useful_test(){
     int a=0,b=0,c=0,d=0;
 
-    for(int i=0;i<256;i++){
-        if(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[i].val!=0){
-            huff_val_useful->DC0.val[a]=Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[i].val;
-            huff_val_useful->DC0.code[a]=(HuffmanCode)malloc(sizeof(HuffmanCode)*2);
-            *huff_val_useful->DC0.code[a]=(char*)malloc(sizeof(HuffmanCode)*2);
-            tobin(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[i].code,*huff_val_useful->DC0.code[a]);
+    for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[0].one_huff_num;i++) {
+            huff_val_useful->DC0.val[a] = Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[i].val;
+            huff_val_useful->DC0.code[a] = (char *) malloc(sizeof(char) * 3);
+            strcpy(huff_val_useful->DC0.code[a], tobin(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[i].code));
             a++;
-            huff_val_useful->DC0.count=a;
-        }
-        if(Dir_Record->dir_huff[0].jpeg_huff[1].huff_table[i].val!=0){
-            huff_val_useful->DC1.val[b]=Dir_Record->dir_huff[0].jpeg_huff[1].huff_table[i].val;
-            huff_val_useful->DC1.code[b]=(HuffmanCode)malloc(sizeof(HuffmanCode)*2);
-            *huff_val_useful->DC1.code[b]=(char*)malloc(sizeof(HuffmanCode)*2);
-            tobin(Dir_Record->dir_huff[0].jpeg_huff[1].huff_table[i].code,*huff_val_useful->DC1.code[b]);
+            huff_val_useful->DC0.count = a;
+    }
+    for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[1].one_huff_num;i++) {
+            huff_val_useful->DC1.val[b] = Dir_Record->dir_huff[0].jpeg_huff[1].huff_table[i].val;
+            huff_val_useful->DC1.code[b] = (char *) malloc(sizeof(char) * 3);
+            strcpy(huff_val_useful->DC1.code[b], tobin(Dir_Record->dir_huff[0].jpeg_huff[1].huff_table[i].code));
             b++;
-            huff_val_useful->DC1.count=b;
-        }
-        if(Dir_Record->dir_huff[0].jpeg_huff[2].huff_table[i].val!=0){
-            huff_val_useful->AC0.val[c]=Dir_Record->dir_huff[0].jpeg_huff[2].huff_table[i].val;
-            huff_val_useful->AC0.code[c]=(HuffmanCode)malloc(sizeof(HuffmanCode)*2);
-            *huff_val_useful->AC0.code[c]=(char*)malloc(sizeof(HuffmanCode)*2);
-            tobin(Dir_Record->dir_huff[0].jpeg_huff[2].huff_table[i].code,*huff_val_useful->AC0.code[c]);
+            huff_val_useful->DC1.count = b;
+    }
+    for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[2].one_huff_num;i++) {
+            huff_val_useful->AC0.val[c] = Dir_Record->dir_huff[0].jpeg_huff[2].huff_table[i].val;
+            huff_val_useful->AC0.code[c] = (char *) malloc(sizeof(char) * 3);
+            strcpy(huff_val_useful->AC0.code[c], tobin(Dir_Record->dir_huff[0].jpeg_huff[2].huff_table[i].code));
             c++;
-            huff_val_useful->AC0.count=c;
-        }
-        if(Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[i].val!=0){
+            huff_val_useful->AC0.count = c;
+    }
+    for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[3].one_huff_num;i++) {
             huff_val_useful->AC1.val[d]=Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[i].val;
-            huff_val_useful->AC1.code[d]=(HuffmanCode)malloc(sizeof(HuffmanCode)*2);
-            *huff_val_useful->AC1.code[d]=(char*)malloc(sizeof(HuffmanCode)*2);
-            tobin(Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[i].code,*huff_val_useful->AC1.code[d]);
+            huff_val_useful->AC1.code[d]=(char*)malloc(sizeof(char)*32);
+            strcpy(huff_val_useful->AC1.code[d],tobin(Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[i].code));
             d++;
             huff_val_useful->AC1.count=d;
-        }
     }
+    strcpy(huff_val_useful->DC0.code[0],"00");
+    strcpy(huff_val_useful->DC0.code[1],"010");
+    strcpy(huff_val_useful->DC0.code[2],"011");
+    strcpy(huff_val_useful->DC1.code[0],"00");
+    strcpy(huff_val_useful->DC1.code[1],"01");
+    strcpy(huff_val_useful->AC0.code[0],"00");
+    strcpy(huff_val_useful->AC0.code[1],"01");
+    strcpy(huff_val_useful->AC1.code[0],"0");
+
+
+
+
 }
 
 void build_huff_val_useful(){
     int a=0,b=0,c=0,d=0;
-
 
     for(int i=0;i<256;i++){
         if(huff_val.DC0[i]!=0){
@@ -1434,37 +1370,37 @@ void BubbleSort(long long *p, int length, int * index)
     }
 }
 
-void cal_new_huffman(HuffmanCode arr[],int length){
+void cal_new_huffman(char* arr[],int length){
 
     long long huffcode=1;
     int huffcode_length=3;
-    int one_size_max[17]={0,0,2,1,3,3,2,4,4,2,9,2,5,2,1,1,256};
+    int one_size_max[17]={0,0,2,1,3,3,2,4,2,7,4,8,4,4,2,1,256};
     int size=2;
     int size_num=2;
-    strcpy(*arr[0],"00");
-    strcpy(*arr[1],"01");
+    strcpy(arr[0],"00");
+    strcpy(arr[1],"01");
 
-    HuffmanCode str;
-    str=(HuffmanCode)malloc(sizeof(HuffmanCode));
-    *str=(char*)malloc(sizeof(HuffmanCode));
+    char* str;
+    str=(char*)malloc(sizeof(char)*32);
 
 
     for(int i=2;i<length;i++){
         if(size_num<one_size_max[size]){
             huffcode++;
-            strcpy(*str,"");
-            tobin(huffcode,*str);
+            strcpy(str,"");
+            strcpy(str,tobin(huffcode));
         } else{
             size_num=0;
             size++;
             huffcode++;
             huffcode*=2;
-            strcpy(*str,"");
-            tobin(huffcode,*str);
+            strcpy(str,"");
+            strcpy(str,tobin(huffcode));
         }
-        strcpy(*arr[i],*str);
+        strcpy(arr[i],str);
         size_num++;
     }
+    free(str);
 }
 void move_array(int arr[],int index[],int length){
     int *temp=(int*)malloc(sizeof(int)*length);
@@ -1477,66 +1413,62 @@ void move_array(int arr[],int index[],int length){
 }
 
 void build_DC0_tree(){
-    printf("DC0\n");
+    printf("\nDC0\n");
     const int length=huff_val_useful->DC0.count;
     for (int i = 0; i < length; ++i) {
-        huff_val_useful->DC0.code[i]=(HuffmanCode)malloc(sizeof(HuffmanCode));
-        *huff_val_useful->DC0.code[i]=(char*)malloc(sizeof(HuffmanCode));
+        huff_val_useful->DC0.code[i]=(char*)malloc(sizeof(char)*32);
     }
     int *index=(int*)malloc(sizeof(int)*length);
     BubbleSort(huff_val_useful->DC0.num,length,index);
     move_array(huff_val_useful->DC0.val,index,length);
     cal_new_huffman(huff_val_useful->DC0.code,length);
     for (int i = 0; i < length; ++i) {
-        printf("%02x,%s,%d\n",huff_val_useful->DC0.val[i],*huff_val_useful->DC0.code[i],strlen(*huff_val_useful->DC0.code[i]));
+        printf("%02x,%s,%ld\n",huff_val_useful->DC0.val[i],huff_val_useful->DC0.code[i],strlen(huff_val_useful->DC0.code[i]));
     }
 }
 
 void build_DC1_tree(){
-    printf("DC1\n");
+    printf("\nDC1\n");
     const int length=huff_val_useful->DC1.count;
     for (int i = 0; i < length; ++i) {
-        huff_val_useful->DC1.code[i]=(HuffmanCode)malloc(sizeof(HuffmanCode));
-        *huff_val_useful->DC1.code[i]=(char*)malloc(sizeof(HuffmanCode));
+        huff_val_useful->DC1.code[i]=(char*)malloc(sizeof(char)*32);
     }
     int *index=(int*)malloc(sizeof(int)*length);
     BubbleSort(huff_val_useful->DC1.num,length,index);
     move_array(huff_val_useful->DC1.val,index,length);
     cal_new_huffman(huff_val_useful->DC1.code,length);
     for (int i = 0; i < length; ++i) {
-        printf("%02x,%s,%d\n",huff_val_useful->DC1.val[i],*huff_val_useful->DC1.code[i],strlen(*huff_val_useful->DC1.code[i]));
+        printf("%02x,%s,%ld\n",huff_val_useful->DC1.val[i],huff_val_useful->DC1.code[i],strlen(huff_val_useful->DC1.code[i]));
     }
 }
 
 void build_AC0_tree(){
-    printf("AC0\n");
+    printf("\nAC0\n");
     const int length=huff_val_useful->AC0.count;
     for (int i = 0; i < length; ++i) {
-        huff_val_useful->AC0.code[i]=(HuffmanCode)malloc(sizeof(HuffmanCode));
-        *huff_val_useful->AC0.code[i]=(char*)malloc(sizeof(HuffmanCode));
+        huff_val_useful->AC0.code[i]=(char*)malloc(sizeof(char)*32);
     }
     int *index=(int*)malloc(sizeof(int)*length);
     BubbleSort(huff_val_useful->AC0.num,length,index);
     move_array(huff_val_useful->AC0.val,index,length);
     cal_new_huffman(huff_val_useful->AC0.code,length);
     for (int i = 0; i < length; ++i) {
-        printf("%02x,%s,%d\n",huff_val_useful->AC0.val[i],*huff_val_useful->AC0.code[i],strlen(*huff_val_useful->AC0.code[i]));
+        printf("%02x,%s,%ld\n",huff_val_useful->AC0.val[i],huff_val_useful->AC0.code[i],strlen(huff_val_useful->AC0.code[i]));
     }
 }
 
 void build_AC1_tree(){
-    printf("AC1\n");
+    printf("\nAC1\n");
     const int length=huff_val_useful->AC1.count;
     for (int i = 0; i < length; ++i) {
-        huff_val_useful->AC1.code[i]=(HuffmanCode)malloc(sizeof(HuffmanCode));
-        *huff_val_useful->AC1.code[i]=(char*)malloc(sizeof(HuffmanCode));
+        huff_val_useful->AC1.code[i]=(char*)malloc(sizeof(char)*32);
     }
     int *index=(int*)malloc(sizeof(int)*length);
     BubbleSort(huff_val_useful->AC1.num,length,index);
     move_array(huff_val_useful->AC1.val,index,length);
     cal_new_huffman(huff_val_useful->AC1.code,length);
     for (int i = 0; i < length; ++i) {
-        printf("%02x,%s,%d\n",huff_val_useful->AC1.val[i],*huff_val_useful->AC1.code[i],strlen(*huff_val_useful->AC1.code[i]));
+        printf("%02x,%s,%ld\n",huff_val_useful->AC1.val[i],huff_val_useful->AC1.code[i],strlen(huff_val_useful->AC1.code[i]));
     }
 }
 
@@ -1626,59 +1558,53 @@ void build_AC1_tree(){
 
 //__________________________________________________________
 
-bitset<8> full_string_8(HuffmanCode str){
-    int code_size=strlen(*str);
+
+bitset<8> full_string_8(char* str){
+    int code_size=strlen(str);
     bitset<8> return_code("00000000");
-    char a[1];
+    char a;
     for(int i=0;i<code_size;i++){
-        a[0]= ((*str)[code_size - 1-i]);
-        return_code[i]= atoi(a);
+        a= (str[code_size - 1-i]);
+        return_code[i]= a-'0';
 //        printf("%c\n",(*write_code)[code_size - 1 - i - bits]);
-        memset(a,'\0', sizeof(a));
     }
     return return_code;
 }
 
-bitset<8> head_string(HuffmanCode write_code, int bits){
-    int code_bits=strlen(*write_code);
+bitset<8> head_string(char* write_code, int bits){
+    int code_bits=strlen(write_code);
     bitset<8> return_code("00000000");
-    int code_size=strlen(*write_code);
-    char a[1];
+    int code_size=strlen(write_code);
+    char a;
     for(int i=0;i<code_bits-bits;i++){
-        a[0]= ((*write_code)[code_size - 1 - i - bits]);
-        return_code[i]= atoi(a);
+        a= (write_code[code_size - 1 - i - bits]);
+        return_code[i]= a-'0';
 //        printf("%c\n",(*write_code)[code_size - 1 - i - bits]);
-        memset(a,'\0', sizeof(a));
     }
     return return_code;
 }
 
-bitset<8> use8_string(HuffmanCode write_code,int bits){
+bitset<8> use8_string(char* write_code,int bits){
     bitset<8> return_code("00000000");
-    int code_size=strlen(*write_code);
-    char a[1];
+    int code_size=strlen(write_code);
+    char a;
 
     for(int i=0;i<8;i++){
-        a[0]= ((*write_code)[code_size - 1 - i - bits]);
-        return_code[i]= atoi(a);
+        a= (write_code[code_size - 1 - i - bits]);
+        return_code[i]= a-'0';
 //        printf("%c\n",(*write_code)[code_size - 1 - i - bits]);
-        memset(a,'\0', sizeof(a));
     }
     return return_code;
 }
 
-bitset<8> tail_string(HuffmanCode write_code,int bits){
+bitset<8> tail_string(char* write_code,int bits){
     bitset<8> return_code("00000000");
-    int code_size=strlen(*write_code);
-    char a[1];
-
-//    for(int i=0;i<code_size;i++){
-//        printf("%c\n",(*write_code)[i]);
-//    }
+    int code_size=strlen(write_code);
+    char a;
 
     for(int i=0;i<bits;i++){
-        a[0]= ((*write_code)[code_size - 1 - i]);
-        return_code[i]= atoi(a);
+        a= (write_code[code_size - 1 - i]);
+        return_code[i]= a-'0';
 //        printf("%c\n",(*write_code)[code_size-1-i]);
 //        memset(a,'\0', sizeof(a));
     }
@@ -1690,12 +1616,15 @@ bitset<8> WriteNewData_Stream("00000000");
 bitset<8> WriteNewData_last_Stream("00000000");
 
 int WriteNewData_Stream_Bits=0;
-void Write_Stream_To_File(HuffmanCode write_code,FILE *fp){
+char lastbyte;
+
+
+void Write_Stream_To_File(char* write_code,FILE *fp){
     unsigned char byte;
 //    unsigned char last_byte;
     unsigned long temp;
 //    unsigned long last_temp;
-    int code_bits=strlen(*write_code);
+    int code_bits=strlen(write_code);
     int notwrite_code_bits=code_bits;
     bitset<8> temp_code("00000000");
     if(code_bits>(8-WriteNewData_Stream_Bits)){//不能塞下，则先补满
@@ -1709,41 +1638,22 @@ void Write_Stream_To_File(HuffmanCode write_code,FILE *fp){
         if(byte==0xff){
             fprintf(fp,"%c",byte);
             fprintf(fp,"%c",0x00);
+            lastbyte=0x00;
         }else{
+            if(lastbyte==0xb9||byte==0x00){
+//                printf("aaa\n");
+            }
             fprintf(fp,"%c",byte);
+            lastbyte=byte;
         }
-//        WriteNewData_last_Stream.operator<<=(4);
-//        WriteNewData_last_Stream.operator|=(WriteNewData_Stream.operator>>(4));
-//
-//        last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
-//        last_byte=last_temp;
-//
-//        if(last_byte==0xff){//出现af fa转换为af f0 0a
-//            fprintf(fp,"%c",0xf0);
-//            WriteNewData_last_Stream.operator<<=(8);
-//            for(int i=0;i<4;i++){
-//                WriteNewData_last_Stream[i]=WriteNewData_Stream[i];
-//            }
-//            last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
-//            last_byte=last_temp;
-//            fprintf(fp,"%c",last_byte);
-//            WriteNewData_Stream=WriteNewData_last_Stream;
-//        } else if (byte==0xff){//aa ff -> aa ff 00
-//            fprintf(fp,"%c",byte);
-//            fprintf(fp,"%c",0x00);
-//            WriteNewData_Stream<<=(8);
-//        }else{
-//            fprintf(fp,"%c",byte);
-//        }
-//
-//        WriteNewData_last_Stream=WriteNewData_Stream;
+
         WriteNewData_Stream.operator<<=(8);
         temp_code.operator<<=(8);
         WriteNewData_Stream_Bits=0;
 
 
         if(notwrite_code_bits>=8){//补满后剩下的大于8位，则再次补满
-            notwrite_code_bits=code_bits-8;//3
+            notwrite_code_bits=notwrite_code_bits-8;//3
             temp_code.operator|=(use8_string((write_code),(notwrite_code_bits)));
             WriteNewData_Stream.operator|=(temp_code);
             temp=WriteNewData_Stream.to_ulong();//转换为long类型
@@ -1752,33 +1662,15 @@ void Write_Stream_To_File(HuffmanCode write_code,FILE *fp){
             if(byte==0xff){
                 fprintf(fp,"%c",byte);
                 fprintf(fp,"%c",0x00);
+                lastbyte=0x00;
             }else{
+                if(lastbyte==0xb9&&byte==0x00){
+//                    printf("aaa\n");
+                }
                 fprintf(fp,"%c",byte);
+                lastbyte=byte;
             }
-//            WriteNewData_last_Stream.operator<<=(4);
-//            WriteNewData_last_Stream.operator|=(WriteNewData_Stream.operator>>(4));
-//            last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
-//            last_byte=last_temp;
-//
-//            if(last_byte==0xff){//出现af fa转换为af f0 0a
-//                fprintf(fp,"%c",0xf0);
-//                WriteNewData_last_Stream.operator<<=(8);
-//                for(int i=0;i<4;i++){
-//                    WriteNewData_last_Stream[i]=WriteNewData_Stream[i];
-//                }
-//                last_temp=WriteNewData_last_Stream.to_ulong();//转换为long类型
-//                last_byte=last_temp;
-//                fprintf(fp,"%c",last_byte);
-//                WriteNewData_Stream=WriteNewData_last_Stream;
-//            } else if (byte==0xff){//aa ff -> aa ff 00
-//                fprintf(fp,"%c",byte);
-//                fprintf(fp,"%c",0x00);
-//                WriteNewData_Stream<<=(8);
-//            }else{
-//                fprintf(fp,"%c",byte);
-//            }
-//
-//            WriteNewData_last_Stream=WriteNewData_Stream;
+
             WriteNewData_Stream.operator<<=(8);
             temp_code.operator<<=(8);
             WriteNewData_Stream_Bits=0;
@@ -1800,6 +1692,7 @@ void Write_Stream_To_File(HuffmanCode write_code,FILE *fp){
         temp_code.operator<<=(8);
     }
 }
+
 
 static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct huffman_table *huffman_table,FILE *fp)
 {
@@ -1945,15 +1838,15 @@ char* itoa (long long n)
         }
     }
     str[strlen(str)]='\0';
-    free(s);
+    memset(s,'\0', sizeof(s));
     return str;
 }
 
-void tobin(long long n,char*str)
+char* tobin(long long n)
 {
     long long binaryNumber = 0;
     long long remainder, i = 1, step = 1;
-
+    char *str=(char*)malloc(sizeof(char)*32);
     while (n!=0)
     {
         remainder = n%2;
@@ -1963,7 +1856,7 @@ void tobin(long long n,char*str)
         i *= 10;
     }
     strcpy(str,itoa(binaryNumber));
-
+    return str;
 
 }
 
@@ -1990,7 +1883,7 @@ void tobin(long long n,char*str)
 //    }
 //}
 
-HuffmanCode  Find_New_code(int val,int type){
+char*  Find_New_code(int val,int type){
     switch (type){
         case 0:
             for(int i=0;i<256;i++){
@@ -2020,10 +1913,11 @@ HuffmanCode  Find_New_code(int val,int type){
                 }
             }
             break;
+        default:
+            break;
     }
 
 }
-
 
 
 
@@ -2041,10 +1935,9 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
     /* Initialize the DCT coef table */
     memset(DCT, 0, sizeof(DCT));
 
-    HuffmanCode write_code;
+    char* write_code;
 
-    write_code=(HuffmanCode)malloc(sizeof(HuffmanCode)*2);
-    *write_code=(char*)malloc(sizeof(HuffmanCode)*2);
+    write_code=(char*)malloc(sizeof(char)*32);
 
     /* DC coefficient decoding */
     huff_code = WriteNewData_get_next_huffman_code(priv, c->DC_table,fp);
@@ -2052,18 +1945,18 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
     switch (component){
         case 0:
 //            huff_val_useful->DC0.code[i-1]= & HC[i];
-            strcpy(*write_code,"");
-            strcpy(*write_code,*Find_New_code(huff_code,0));
+            strcpy(write_code,"");
+            strcpy(write_code,Find_New_code(huff_code,0));
 //            printf("%s\n",*write_code);
             break;
         case 1:
-            strcpy(*write_code,"");
-            strcpy(*write_code,*Find_New_code(huff_code,1));
+            strcpy(write_code,"");
+            strcpy(write_code,Find_New_code(huff_code,1));
 //            printf("%s\n",*write_code);
             break;
         case 2:
-            strcpy(*write_code,"");
-            strcpy(*write_code,*Find_New_code(huff_code,1));
+            strcpy(write_code,"");
+            strcpy(write_code,Find_New_code(huff_code,1));
 //            printf("%s\n",*write_code);
             break;
     }
@@ -2097,8 +1990,8 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
         if ((unsigned int)DCT[0] < (1UL<<((huff_code)-1)))
             DCT[0] += (0xFFFFFFFFUL<<(huff_code))+1;
 //        HuffmanCode write_code;
-        strcpy(*write_code,"");
-        tobin(DCT[0],*write_code);
+        strcpy(write_code,"");
+        strcpy(write_code,tobin(DCT[0]));
         Write_Stream_To_File(write_code,fp);
 //        fclose(fp);
 
@@ -2118,18 +2011,18 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
         switch (component){
             case 0:
 //            huff_val_useful->DC0.code[i-1]= & HC[i];
-                strcpy(*write_code,"");
-                strcpy(*write_code,*Find_New_code(huff_code,2));
+                strcpy(write_code,"");
+                strcpy(write_code,Find_New_code(huff_code,2));
 //            printf("%s\n",*write_code);
                 break;
             case 1:
-                strcpy(*write_code,"");
-                strcpy(*write_code,*Find_New_code(huff_code,3));
+                strcpy(write_code,"");
+                strcpy(write_code,Find_New_code(huff_code,3));
 //            printf("%s\n",*write_code);
                 break;
             case 2:
-                strcpy(*write_code,"");
-                strcpy(*write_code,*Find_New_code(huff_code,3));
+                strcpy(write_code,"");
+                strcpy(write_code,Find_New_code(huff_code,3));
 //            printf("%s\n",*write_code);
                 break;
         }
@@ -2172,8 +2065,8 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
             priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
             if ((unsigned int)DCT[j] < (1UL<<((size_val)-1)))
                 DCT[j] += (0xFFFFFFFFUL<<(size_val))+1;//转为负数
-            strcpy(*write_code,"");
-            tobin(DCT[j],*write_code);
+            strcpy(write_code,"");
+            strcpy(write_code,tobin(DCT[j]));
             Write_Stream_To_File(write_code,fp);
             j++;
         }
@@ -2181,6 +2074,8 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
 
     for (j = 0; j < 64; j++)
         c->DCT[j] = DCT[j];
+
+    free(write_code);
 }
 
 /*
@@ -2276,6 +2171,78 @@ static const WriteNewData_decode_MCU_fct WriteNewData_decode_mcu_3comp_table[4] 
         WriteNewData_decode_MCU_2x2_3planes,
 };
 
+
+
+static int Write_RST(struct jdec_private *priv,FILE *fp)
+{
+
+    int rst_marker_found = 0;
+    int marker;
+    const unsigned char *stream = priv->stream;
+
+    /* Parse marker */
+    while (!rst_marker_found)
+    {
+        while (*stream++ != 0xff)
+        {
+            if (stream >= priv->stream_end)
+                printf("EOF while search for a RST marker.");
+        }
+        /* Skip any padding ff byte (this is normal) */
+        while (*stream == 0xff)
+            stream++;
+
+        marker = *stream++;
+        if ((RST+priv->last_rst_marker_seen) == marker)
+            rst_marker_found = 1;
+        else if (marker >= RST && marker <= RST7)
+            printf("Wrong Reset marker found, abording");
+        else if (marker == EOI)
+            return 0;
+    }
+//    printf("RST Marker %d found at offset %d\n", priv->last_rst_marker_seen, stream - priv->stream_begin);
+
+    priv->stream = stream;
+
+
+
+
+    int move=8-WriteNewData_Stream_Bits;
+
+    if(move<8&&move>0){
+        WriteNewData_Stream.operator<<=(move);
+        for(int i=0;i<move;i++){
+            WriteNewData_Stream[i]=1;
+        }
+        unsigned char byte;
+        unsigned long temp;
+
+        temp=WriteNewData_Stream.to_ulong();//转换为long类型
+        byte=temp;//转换为char类型
+
+        fprintf(fp,"%c",byte);
+    } else if (move==0){
+        unsigned char byte;
+        unsigned long temp;
+
+        temp=WriteNewData_Stream.to_ulong();//转换为long类型
+        byte=temp;//转换为char类型
+
+        fprintf(fp,"%c",byte);
+    }
+
+
+
+    fprintf(fp,"%c",0xff);
+
+    fprintf(fp,"%c",RST+priv->last_rst_marker_seen);
+    priv->last_rst_marker_seen++;
+    priv->last_rst_marker_seen &= 7;
+    WriteNewData_Stream.operator<<=(8);
+    WriteNewData_Stream_Bits=0;
+
+}
+
 int WriteNewData_workon;
 int WriteNewData(struct jdec_private *priv,FILE *fp)
 {
@@ -2346,8 +2313,7 @@ int WriteNewData(struct jdec_private *priv,FILE *fp)
                 {
                     priv->stream -= (priv->nbits_in_reservoir/8);
                     resync(priv);
-                    if (find_next_rst_marker(priv) < 0)
-                        return -1;
+                    Write_RST(priv,fp);
                 }
             }
         }
@@ -2413,18 +2379,40 @@ void WriteNewData_convert_one_image(const char *infilename)
         printf(tinyjpeg_get_printfstring(jdec));
 //写完数据后清空存储区
 
-    WriteNewData_Stream.operator<<=(8-WriteNewData_Stream_Bits);
-    unsigned char byte;
-    unsigned long temp;
-    temp=WriteNewData_Stream.to_ulong();//转换为long类型
-    byte=temp;//转换为char类型
-    fprintf(fpdat,"%c",byte);
-    if(byte==0xff){
-        byte=0x00;
+    int move=8-WriteNewData_Stream_Bits;
+
+    if(move<8&&move>0){
+        WriteNewData_Stream.operator<<=(move);
+        for(int i=0;i<move;i++){
+            WriteNewData_Stream[i]=1;
+        }
+        unsigned char byte;
+        unsigned long temp;
+
+        temp=WriteNewData_Stream.to_ulong();//转换为long类型
+        byte=temp;//转换为char类型
+
         fprintf(fp,"%c",byte);
+        if(byte==0xff){
+            byte=0x00;
+            fprintf(fp,"%c",byte);
+        }
+    } else if (move==0){
+        unsigned char byte;
+        unsigned long temp;
+
+        temp=WriteNewData_Stream.to_ulong();//转换为long类型
+        byte=temp;//转换为char类型
+
+        fprintf(fp,"%c",byte);
+        if(byte==0xff){
+            byte=0x00;
+            fprintf(fp,"%c",byte);
+        }
     }
     WriteNewData_Stream.operator<<=(8);
     WriteNewData_Stream_Bits=0;
+
 
     //写入ffd9
     fprintf(fp,"%c",0xff);
@@ -2435,7 +2423,7 @@ void WriteNewData_convert_one_image(const char *infilename)
 
 }
 
-void Write_One_Huffman_Table(HuffmanCode str,FILE *fp){
+void Write_One_Huffman_Table(char* str,FILE *fp){
     unsigned char byte;
     unsigned long temp;
     WriteNewData_Stream.operator|=(full_string_8(str));
@@ -2448,16 +2436,18 @@ void Write_One_Huffman_Table(HuffmanCode str,FILE *fp){
 
 void Write_Huffman_Table(FILE *fp){
 
+
+    char* str;
+    str=(char*)malloc(sizeof(str)*3);
 //    fprintf(fp,"%c",0xff);
 //    fprintf(fp,"%c",0xc4);
     fprintf(fp,"%c",0x00);
-    fprintf(fp,"%c",0xaa);
+    int table_length=70+huff_val_useful->DC0.count+huff_val_useful->DC1.count+huff_val_useful->AC0.count+huff_val_useful->AC1.count;
+    strcpy(str,"");
+    strcpy(str,tobin(table_length));
+    Write_One_Huffman_Table(str,fp);
 
 
-
-    HuffmanCode str;
-    str=(HuffmanCode)malloc(sizeof(HuffmanCode));
-    *str=(char*)malloc(sizeof(HuffmanCode));
     long long count[17];
 
     //DC0
@@ -2465,68 +2455,76 @@ void Write_Huffman_Table(FILE *fp){
     fprintf(fp,"%c",0x00);
     for(int i=1;i<17;i++){
         for(int j=0;j<huff_val_useful->DC0.count;j++){
-            if(strlen(*huff_val_useful->DC0.code[j])==i){
+            if(strlen(huff_val_useful->DC0.code[j])==i){
                 count[i]++;
             }
         }
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
-        strcpy(*str,"");
-        tobin(count[i],*str);
+        strcpy(str,"");
+        strcpy(str,tobin(count[i]));
         Write_One_Huffman_Table(str,fp);
     }
 
     for(int i=0;i<huff_val_useful->DC0.count;i++){
-        strcpy(*str,"");
-        tobin(huff_val_useful->DC0.val[i],*str);
+        WriteNewData_Stream.operator<<=(8);
+        WriteNewData_Stream_Bits=0;
+        strcpy(str,"");
+        strcpy(str,tobin(huff_val_useful->DC0.val[i]));
         Write_One_Huffman_Table(str,fp);
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
     }
 
 
-    //AC0
-    memset(count,0, sizeof(count));
-    fprintf(fp,"%c",0x10);
-    for(int i=1;i<17;i++){
-        for(int j=0;j<huff_val_useful->AC0.count;j++){
-            if(strlen(*huff_val_useful->AC0.code[j])==i){
-                count[i]++;
-            }
-        }
-        WriteNewData_Stream.operator<<=(8);
-        WriteNewData_Stream_Bits=0;
-        strcpy(*str,"");
-        tobin(count[i],*str);
-        Write_One_Huffman_Table(str,fp);
-    }
-    for(int i=0;i<huff_val_useful->AC0.count;i++){
-        strcpy(*str,"");
-        tobin(huff_val_useful->AC0.val[i],*str);
-        Write_One_Huffman_Table(str,fp);
-        WriteNewData_Stream.operator<<=(8);
-        WriteNewData_Stream_Bits=0;
-    }
+
 
     //DC1
     memset(count,0, sizeof(count));
     fprintf(fp,"%c",0x01);
     for(int i=1;i<17;i++){
         for(int j=0;j<huff_val_useful->DC1.count;j++){
-            if(strlen(*huff_val_useful->DC1.code[j])==i){
+            if(strlen(huff_val_useful->DC1.code[j])==i){
                 count[i]++;
             }
         }
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
-        strcpy(*str,"");
-        tobin(count[i],*str);
+        strcpy(str,"");
+        strcpy(str,tobin(count[i]));
         Write_One_Huffman_Table(str,fp);
     }
 
     for(int i=0;i<huff_val_useful->DC1.count;i++){
-        strcpy(*str,"");
-        tobin(huff_val_useful->DC1.val[i],*str);
+        WriteNewData_Stream.operator<<=(8);
+        WriteNewData_Stream_Bits=0;
+        strcpy(str,"");
+        strcpy(str,tobin(huff_val_useful->DC1.val[i]));
+        Write_One_Huffman_Table(str,fp);
+        WriteNewData_Stream.operator<<=(8);
+        WriteNewData_Stream_Bits=0;
+    }
+
+    //AC0
+    memset(count,0, sizeof(count));
+    fprintf(fp,"%c",0x10);
+    for(int i=1;i<17;i++){
+        for(int j=0;j<huff_val_useful->AC0.count;j++){
+            if(strlen(huff_val_useful->AC0.code[j])==i){
+                count[i]++;
+            }
+        }
+        WriteNewData_Stream.operator<<=(8);
+        WriteNewData_Stream_Bits=0;
+        strcpy(str,"");
+        strcpy(str,tobin(count[i]));
+        Write_One_Huffman_Table(str,fp);
+    }
+    for(int i=0;i<huff_val_useful->AC0.count;i++){
+        WriteNewData_Stream.operator<<=(8);
+        WriteNewData_Stream_Bits=0;
+        strcpy(str,"");
+        strcpy(str,tobin(huff_val_useful->AC0.val[i]));
         Write_One_Huffman_Table(str,fp);
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
@@ -2537,45 +2535,27 @@ void Write_Huffman_Table(FILE *fp){
     fprintf(fp,"%c",0x11);
     for(int i=1;i<17;i++){
         for(int j=0;j<huff_val_useful->AC1.count;j++){
-            if(strlen(*huff_val_useful->AC1.code[j])==i){
+            if(strlen(huff_val_useful->AC1.code[j])==i){
                 count[i]++;
             }
         }
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
-        strcpy(*str,"");
-        tobin(count[i],*str);
+        strcpy(str,"");
+        strcpy(str,tobin(count[i]));
         Write_One_Huffman_Table(str,fp);
     }
 
     for(int i=0;i<huff_val_useful->AC1.count;i++){
-        strcpy(*str,"");
-        tobin(huff_val_useful->AC1.val[i],*str);
+        WriteNewData_Stream.operator<<=(8);
+        WriteNewData_Stream_Bits=0;
+        strcpy(str,"");
+        strcpy(str,tobin(huff_val_useful->AC1.val[i]));
         Write_One_Huffman_Table(str,fp);
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
     }
-    //DC0
-//    fprintf(fp,"%c",0x11);
-//
-//
-//
-//
-////    Write_Stream_To_File(write_code,fp);
-//
-//    temp=WriteNewData_Stream.to_ulong();//转换为long类型
-//    byte=temp;//转换为char类型
-//    fprintf(fp,"%c",byte);
-//    if(byte==0xff){
-//        byte=0x00;
-//        fprintf(fp,"%c",byte);
-//    }
-//    WriteNewData_Stream.operator<<=(8);
-//    WriteNewData_Stream_Bits=0;
-//
-//    //写入ffd9
-//    fprintf(fp,"%c",0xff);
-//    fprintf(fp,"%c",0xd9);
+    free(str);
 };
 
 //__________________________________________________________
@@ -2765,9 +2745,9 @@ int main(){
         printf("\n%s\n",Dir_Record->dir_huff[workon].FullPathName);
         convert_one_image(Dir_Record->dir_huff[workon].FullPathName);
     }
+//    build_huff_val_useful_test();
 
     build_huff_val_useful();
-//    build_huff_val_useful_test();
     build_DC0_tree();
     build_DC1_tree();
     build_AC0_tree();
@@ -2812,4 +2792,5 @@ int main(){
 //        printf("%2.2x ",all_val[i].val);
 //        printf("%8.8x\n",all_val[i].code);
 //    }
+//memset(JPEGFileNameRecord, 0, sizeof(JPEGFileNameRecord));
 //memset(JPEGFileNameRecord, 0, sizeof(JPEGFileNameRecord));
