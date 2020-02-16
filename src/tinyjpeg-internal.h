@@ -80,19 +80,13 @@ struct jdec_private
 };
 
 struct huffman_val{
-    int DC0[256]={-1};
-    int DC1[256]={-1};
-    int AC0[256]={-1};
-    int AC1[256]={-1};
+    int DC0[256]={0};
+    int DC1[256]={0};
+    int AC0[256]={0};
+    int AC1[256]={0};
+    int RECORD[256]={0};
 }huff_val;
 
-
-//typedef struct
-//{
-//    unsigned int weight;
-//    unsigned int parent,lchild,rchild;
-//}HTNode,*HuffmanTree; // 动态分配数组存储赫夫曼树
-//typedef char **HuffmanCode; // 动态分配数组存储赫夫曼编码表
 
 typedef struct {
     int val[256]={0};
@@ -106,6 +100,7 @@ typedef struct{
     one_hufftype DC1;
     one_hufftype AC0;
     one_hufftype AC1;
+    one_hufftype RECORD;
 }HUFF_VAL_USEFUL;
 
 //one huffman information

@@ -5,6 +5,9 @@
  * code_size will be used to known how many bits this symbol is encoded.
  * slowtable will be used when the first lookup didn't give the result.
  */
+
+#define FOLDER "/Users/ljc/Documents/GitHub/JPEG_storage/test"
+
 #include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -622,22 +625,14 @@ void getFilelist(){
     FILE *names;
     DIR *dir;
 
-    //pause();
-    ///get the current absoulte path
     memset(basePath, '\0', sizeof(basePath));
-    // getcwd(basePath, 999);
-    // printf("the current dir is : %s\n", basePath);
     strcpy(trainpath, basePath);
-//    strcat(trainpath, "/Users/ljc/摄影照片/train.txt");
-//    strcat(basePath, "/Users/ljc/摄影照片");
-    strcat(trainpath, "/Users/ljc/Documents/GitHub/JPEG_storage/test/train.txt");
-    strcat(basePath, "/Users/ljc/Documents/GitHub/JPEG_storage/test");
+    strcat(trainpath, FOLDER);
+    strcat(trainpath, "/train.txt");
+    strcat(basePath, FOLDER);
     printf("%s\n", basePath);
     fflush(stdout);
 
-    ///get the file list
-    //memset(basePath,'\0',sizeof(basePath));
-    //strncpy(basePath,"./XL",-1);
     names = fopen(trainpath, "a+");
     readFileList(basePath, names);
 
@@ -676,9 +671,7 @@ static int get_next_huffman_code(struct jdec_private *priv, struct huffman_table
         priv->reservoir |= c;
         priv->nbits_in_reservoir+=8;
     }
-//    printf("look %d\n",priv->nbits_in_reservoir);
     hcode = ((priv->reservoir)>>(priv->nbits_in_reservoir-(HUFFMAN_HASH_NBITS)));
-//    printf("result %d\n",priv->nbits_in_reservoir);
 
 
     value = huffman_table->lookup[hcode];//val,在快速查找中
@@ -687,9 +680,7 @@ static int get_next_huffman_code(struct jdec_private *priv, struct huffman_table
         unsigned int code_size = huffman_table->code_size[value];
 //        skip_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, code_size);//跳过val的codesize，即跳过他自己
         priv->nbits_in_reservoir -= (code_size);
-//        printf("skip1 %d\n",priv->nbits_in_reservoir);
         priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
-//        printf("skip2 %d\n",priv->nbits_in_reservoir);
 
 
 
@@ -703,7 +694,6 @@ static int get_next_huffman_code(struct jdec_private *priv, struct huffman_table
         nbits = HUFFMAN_HASH_NBITS + 1 + extra_nbits;
 
 //        look_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, nbits, hcode);
-//        printf("beforefill %d\n",priv->nbits_in_reservoir);
         while (priv->nbits_in_reservoir<nbits)
         {
             unsigned char c;
@@ -716,9 +706,7 @@ static int get_next_huffman_code(struct jdec_private *priv, struct huffman_table
             priv->reservoir |= c;
             priv->nbits_in_reservoir+=8;
         }
-//        printf("look %d\n",priv->nbits_in_reservoir);
         hcode = ((priv->reservoir)>>(priv->nbits_in_reservoir-(nbits)));
-//        printf("result %d\n",priv->nbits_in_reservoir);
 
 
         slowtable = huffman_table->slowtable[extra_nbits];
@@ -727,9 +715,7 @@ static int get_next_huffman_code(struct jdec_private *priv, struct huffman_table
             if (slowtable[0] == hcode) {
 //                skip_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, nbits);
                 priv->nbits_in_reservoir -= (nbits);
-//                printf("skip1 %d\n",priv->nbits_in_reservoir);
                 priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
-//                printf("skip2 %d\n",priv->nbits_in_reservoir);
 
 
                 return slowtable[1];
@@ -746,7 +732,6 @@ static int get_next_huffman_code(struct jdec_private *priv, struct huffman_table
  * Decode a single block that contains the DCT coefficients.
  *
  */
-int temptest=0;
 
 static void process_Huffman_data_unit(struct jdec_private *priv, int component)
 {
@@ -815,10 +800,6 @@ static void process_Huffman_data_unit(struct jdec_private *priv, int component)
     while (j<64)
     {
         huff_code = get_next_huffman_code(priv, c->AC_table);
-//        if(huff_code!=0)
-//        if(huff_code==241&&component!=0) {
-//            printf("aaaaaaaaa\n");
-//        }
         switch (component){
             case 0:
                 huff_val.AC0[huff_code]++;
@@ -883,20 +864,6 @@ static void process_Huffman_data_unit(struct jdec_private *priv, int component)
 }
 
 
-/*
- * Decode all the 3 components for 1x1
- */
-static void decode_ONE_MCU(struct jdec_private *priv)
-{
-    // Y
-    process_Huffman_data_unit(priv, cY);//DC0,AC0,0
-
-    // Cb
-    process_Huffman_data_unit(priv, cCb);//DC1,AC1,1
-
-    // Cr
-    process_Huffman_data_unit(priv, cCr);//DC1,AC1,2
-}
 
 
 static void resync(struct jdec_private *priv)
@@ -1063,11 +1030,17 @@ int tinyjpeg_decode(struct jdec_private *priv)
     resync(priv);
 
 
+    int temp_height;
+    if(priv->height%ystride_by_mcu!=0){
+        temp_height=priv->height/ystride_by_mcu+1;
+    } else{
+        temp_height=priv->height/ystride_by_mcu;
+    }
 
     /* Just the decode the image by macroblock (size is 8x8, 8x16, or 16x16) */
-    for (y=0; y < priv->height/ystride_by_mcu; y++)
+    for (y=0; y < temp_height; y++)
     {
-        for (x=0; x < priv->width; x+=xstride_by_mcu)
+        for (x=0; x < priv->width+1; x+=xstride_by_mcu)
         {
             decode_MCU(priv);
 
@@ -1087,8 +1060,8 @@ int tinyjpeg_decode(struct jdec_private *priv)
         }
     }
 
-    printf("Input file size: %d\n", priv->stream_length+2);
-    printf("Input bytes actually read: %d\n", priv->stream - priv->stream_begin + 2);
+//    printf("Input file size: %d\n", priv->stream_length+2);
+//    printf("Input bytes actually read: %d\n", priv->stream - priv->stream_begin + 2);
 
     return 0;
 }
@@ -1153,7 +1126,10 @@ void build_huff_val_useful_test(){
 }
 
 void build_huff_val_useful(){
-    int a=0,b=0,c=0,d=0;
+    int a=0,b=0,c=0,d=0,e=0;
+    for(int i=0;i<256;i++){
+        huff_val.RECORD[i]=huff_val.DC0[i]+huff_val.DC1[i]+huff_val.AC0[i]+huff_val.AC1[i];
+    }
 
     for(int i=0;i<256;i++){
         if(huff_val.DC0[i]!=0){
@@ -1179,6 +1155,12 @@ void build_huff_val_useful(){
             huff_val_useful->AC1.num[d]=huff_val.AC1[i];
             d++;
             huff_val_useful->AC1.count=d;
+        }
+        if(huff_val.RECORD[i]!=0){
+            huff_val_useful->RECORD.val[e]=i;
+            huff_val_useful->RECORD.num[e]=huff_val.RECORD[i];
+            e++;
+            huff_val_useful->RECORD.count=e;
         }
     }
 }
@@ -1209,57 +1191,198 @@ void BubbleSort(long long *p, int length, int * index)
     }
 }
 
-void cal_new_huffman(char* arr[],int length){
+//
+////int one_size_max[17]={0,1,0,1,3,3,2,4,2,7,4,8,4,0,0,0,256};
+//int one_size_max[17]={0,1,0,1,3,3,2,4,2,7,4,8,4,0,0,0,256};
+////int one_size_max_temp[17]= {0};
+//int one_size_max_record[17]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//
+//
+//int cal_one_size_max(int size){
+//    if(size==1){
+//        return 2;
+//    }else{
+//        return (cal_one_size_max(size-1)-one_size_max[size-1])*2;
+//    }
+//}
+//
+//void cal_best_huffman(){
+//    for(int i=1;i<17;i++){
+//        one_size_max[i]=cal_one_size_max(i);
+//        huff_val_useful->RECORD.count-=one_size_max[i];
+//        if(huff_val_useful->RECORD.count>0){
+//            one_size_max_record[i]++;//记录退1
+//            one_size_max[i]-=one_size_max_record[i];//当前位置退1
+//            huff_val_useful->RECORD.count+=one_size_max_record[i];
+//        }
+//    }
+//
+//    if(huff_val_useful->RECORD.count>0){
+//        for(int j=1;j<17;j++){
+//            one_size_max[j]=0;
+//            for(int i=j+1;i<17;i++){
+//                one_size_max_record[i]=0;
+//                one_size_max[i]=cal_one_size_max(i);
+//                huff_val_useful->RECORD.count-=one_size_max[i];
+//                if(huff_val_useful->RECORD.count>0){
+//                    one_size_max_record[i]++;//记录退1
+//                    one_size_max[i]-=one_size_max_record[i];//当前位置退1
+//                    huff_val_useful->RECORD.count+=one_size_max_record[i];
+//                }
+//            }
+//
+//            for(int k=1;k<17;k++){
+//                printf("%d ",one_size_max[k]);
+//            }
+//            printf("\n");
+//        }
+//
+//    }
+//
+//}
 
-    long long huffcode=1;
-    int huffcode_length=3;
-    int one_size_max[17]={0,0,2,1,3,3,2,4,2,7,4,8,4,1,1,1,256};
-    int size=2;
-    int size_num=2;
-    strcpy(arr[0],"00");
-    strcpy(arr[1],"01");
 
-    char* str;
-    str=(char*)malloc(sizeof(char)*32);
-
-//    for(int i=2;i<length;i++){
+//void cal_new_huffman(char* arr[],int length){
+//
+//    long long huffcode=0;
+//    int huffcode_length=1;
+//    int size=1;
+//    int size_num=0;
+////    strcpy(arr[0],"00");
+////    strcpy(arr[1],"01");
+//    cal_best_huffman();
+//    char* str;
+//    str=(char*)malloc(sizeof(char)*32);
+//
+//    for(int i=0;i<length;i++){
 //        if(size_num<one_size_max[size]){
 //            if(size_num!=0){
 //                huffcode++;
 //            }
 //            strcpy(str,"");
 //            strcpy(str,tobin(huffcode));
+//            if(strlen(str)<size){
+//                int temp_len=strlen(str);
+//                for(int j=temp_len;j>=size-temp_len;j--){
+//                    str[j]=str[j-1];
+//                }
+//                for(int j=size-temp_len-1;j>-1;j--){
+//                    str[j]='0';
+//                }
+//            }
 //            strcpy(arr[i],str);
 //            size_num++;
-//        } else{//超过当前数量
+//        }else{//超过当前数量
 //            size_num=0;
+//            if(one_size_max[size]!=0){
+//                huffcode++;
+//            }
 //            size++;
-//            huffcode++;
 //            huffcode*=2;
 //            i--;
 //        }
 //
 //    }
+//
+////    for(int i=2;i<length;i++){
+////        if(size_num<one_size_max[size]){
+////            huffcode++;
+////            strcpy(str,"");
+////            strcpy(str,tobin(huffcode));
+////        } else{//超过当前数量
+////            size_num=0;
+////            size++;
+////            huffcode++;
+////            huffcode*=2;
+////            strcpy(str,"");
+////            strcpy(str,tobin(huffcode));
+////        }
+////        strcpy(arr[i],str);
+////        size_num++;
+////    }
+//
+//
+////    long long huffcode=1;
+////    int huffcode_length=3;
+////    int size=2;
+////    int size_num=2;
+////    strcpy(arr[0],"00");
+////    strcpy(arr[1],"01");
+////
+////    char* str;
+////    str=(char*)malloc(sizeof(char)*32);
+////    for(int i=2;i<length;i++){
+////
+////        if(size_num<one_size_max[size]){
+////            if(size_num!=0){
+////                huffcode++;
+////            }
+////            strcpy(str,"");
+////            strcpy(str,tobin(huffcode));
+////            strcpy(arr[i],str);
+////            size_num++;
+////        }else{//超过当前数量
+////            size_num=0;
+////            if(one_size_max[size]!=0){
+////                huffcode++;
+////            }
+////            size++;
+////            huffcode*=2;
+////            i--;
+////        }
+////
+////    }
+//
+//    free(str);
+//}
 
 
-    for(int i=2;i<length;i++){
+
+//int one_size_max[17]={0,1,0,1,3,3,2,4,2,7,4,8,4,0,0,0,256};
+//int one_size_max[17]={0,1,1,1,3,3,2,4,2,0,0,0,0,0,0,0,256};
+int one_size_max[17]={0,1,0,1,3,3,2,4,7,0,0,0,0,0,0,0,256};
+
+void cal_new_huffman(char* arr[],int length){
+    long long huffcode=0;
+    int huffcode_length=1;
+    int size=1;
+    int size_num=0;
+    char* str;
+    str=(char*)malloc(sizeof(char)*32);
+
+    for(int i=0;i<length;i++){
         if(size_num<one_size_max[size]){
-            huffcode++;
+            if(size_num!=0){
+                huffcode++;
+            }
             strcpy(str,"");
             strcpy(str,tobin(huffcode));
-        } else{//超过当前数量
+            if(strlen(str)<size){
+                int temp_len=strlen(str);
+                for(int j=temp_len;j>=size-temp_len;j--){
+                    str[j]=str[j-1];
+                }
+                for(int j=size-temp_len-1;j>-1;j--){
+                    str[j]='0';
+                }
+            }
+            strcpy(arr[i],str);
+            size_num++;
+        }else{//超过当前数量
             size_num=0;
+            if(one_size_max[size]!=0){
+                huffcode++;
+            }
             size++;
-            huffcode++;
             huffcode*=2;
-            strcpy(str,"");
-            strcpy(str,tobin(huffcode));
+            i--;
         }
-        strcpy(arr[i],str);
-        size_num++;
+
     }
+
     free(str);
 }
+
 void move_array(int arr[],int index[],int length){
     int *temp=(int*)malloc(sizeof(int)*length);
     for(int i=0;i<length;i++){
@@ -1327,6 +1450,10 @@ void build_AC1_tree(){
     cal_new_huffman(huff_val_useful->AC1.code,length);
     for (int i = 0; i < length; ++i) {
         printf("%02x,%s,%ld\n",huff_val_useful->AC1.val[i],huff_val_useful->AC1.code[i],strlen(huff_val_useful->AC1.code[i]));
+        if(strlen(huff_val_useful->AC1.code[i])>16){
+            printf("size>16 You have to check the one_size_max\n");
+            exit(0);
+        }
     }
 }
 
@@ -1341,7 +1468,6 @@ bitset<8> full_string_8(char* str){
     for(int i=0;i<code_size;i++){
         a= (str[code_size - 1-i]);
         return_code[i]= a-'0';
-//        printf("%c\n",(*write_code)[code_size - 1 - i - bits]);
     }
     return return_code;
 }
@@ -1354,7 +1480,6 @@ bitset<8> head_string(char* write_code, int bits){
     for(int i=0;i<code_bits-bits;i++){
         a= (write_code[code_size - 1 - i - bits]);
         return_code[i]= a-'0';
-//        printf("%c\n",(*write_code)[code_size - 1 - i - bits]);
     }
     return return_code;
 }
@@ -1367,7 +1492,6 @@ bitset<8> use8_string(char* write_code,int bits){
     for(int i=0;i<8;i++){
         a= (write_code[code_size - 1 - i - bits]);
         return_code[i]= a-'0';
-//        printf("%c\n",(*write_code)[code_size - 1 - i - bits]);
     }
     return return_code;
 }
@@ -1380,15 +1504,12 @@ bitset<8> tail_string(char* write_code,int bits){
     for(int i=0;i<bits;i++){
         a= (write_code[code_size - 1 - i]);
         return_code[i]= a-'0';
-//        printf("%c\n",(*write_code)[code_size-1-i]);
-//        memset(a,'\0', sizeof(a));
     }
     return return_code;
 }
 
 
 bitset<8> WriteNewData_Stream("00000000");
-bitset<8> WriteNewData_last_Stream("00000000");
 
 int WriteNewData_Stream_Bits=0;
 char lastbyte;
@@ -1440,9 +1561,6 @@ void Write_Stream_To_File(char* write_code,FILE *fp){
                 fprintf(fp,"%c",0x00);
                 lastbyte=0x00;
             }else{
-                if(lastbyte==0xb9&&byte==0x00){
-//                    printf("aaa\n");
-                }
                 fprintf(fp,"%c",byte);
                 lastbyte=byte;
             }
@@ -1461,9 +1579,6 @@ void Write_Stream_To_File(char* write_code,FILE *fp){
     }else{//直接可以塞下
         WriteNewData_Stream.operator<<=(code_bits);
         WriteNewData_Stream.operator|=(tail_string(write_code,notwrite_code_bits));
-//        temp=WriteNewData_Stream.to_ulong();//转换为long类型
-//        byte=temp;//转换为char类型
-//        fprintf(fp,"%c",byte);
         WriteNewData_Stream_Bits+=code_bits;
         temp_code.operator<<=(8);
     }
@@ -1477,7 +1592,6 @@ static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct 
     uint16_t *slowtable;
 
 //    look_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, HUFFMAN_HASH_NBITS, hcode);
-//    printf("beforefill %d\n",priv->nbits_in_reservoir);
     while (priv->nbits_in_reservoir<HUFFMAN_HASH_NBITS)
     {
         unsigned char c;
@@ -1490,9 +1604,7 @@ static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct 
         priv->reservoir |= c;
         priv->nbits_in_reservoir+=8;
     }
-//    printf("look %d\n",priv->nbits_in_reservoir);
     hcode = ((priv->reservoir)>>(priv->nbits_in_reservoir-(HUFFMAN_HASH_NBITS)));
-//    printf("result %d\n",priv->nbits_in_reservoir);
 
 
     value = huffman_table->lookup[hcode];//val,在快速查找中
@@ -1517,7 +1629,6 @@ static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct 
         nbits = HUFFMAN_HASH_NBITS + 1 + extra_nbits;
 
 //        look_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, nbits, hcode);
-//        printf("beforefill %d\n",priv->nbits_in_reservoir);
         while (priv->nbits_in_reservoir<nbits)
         {
             unsigned char c;
@@ -1530,9 +1641,7 @@ static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct 
             priv->reservoir |= c;
             priv->nbits_in_reservoir+=8;
         }
-//        printf("look %d\n",priv->nbits_in_reservoir);
         hcode = ((priv->reservoir)>>(priv->nbits_in_reservoir-(nbits)));
-//        printf("result %d\n",priv->nbits_in_reservoir);
 
 
         slowtable = huffman_table->slowtable[extra_nbits];
@@ -1541,9 +1650,7 @@ static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct 
             if (slowtable[0] == hcode) {
 //                skip_nbits(priv->reservoir, priv->nbits_in_reservoir, priv->stream, nbits);
                 priv->nbits_in_reservoir -= (nbits);
-//                printf("skip1 %d\n",priv->nbits_in_reservoir);
                 priv->reservoir &= ((1U<<priv->nbits_in_reservoir)-1);
-//                printf("skip2 %d\n",priv->nbits_in_reservoir);
 
 
                 return slowtable[1];
@@ -1960,7 +2067,7 @@ static int Write_RST(struct jdec_private *priv,FILE *fp)
 }
 
 int WriteNewData_workon;
-int WriteNewData(struct jdec_private *priv,FILE *fp)
+int Write_New_Body(struct jdec_private *priv, FILE *fp)
 {
     printf("Write New Data Start!\n");
     fprintf(fp,"%c",0xff);
@@ -2023,9 +2130,15 @@ int WriteNewData(struct jdec_private *priv,FILE *fp)
     resync(priv);
 
 
+    int temp_height;
+    if(priv->height%ystride_by_mcu!=0){
+        temp_height=priv->height/ystride_by_mcu+1;
+    } else{
+        temp_height=priv->height/ystride_by_mcu;
+    }
 
     /* Just the decode the image by macroblock (size is 8x8, 8x16, or 16x16) */
-    for (y=0; y < priv->height/ystride_by_mcu; y++)
+    for (y=0; y < temp_height; y++)
     {
         for (x=0; x < priv->width; x+=xstride_by_mcu)
         {
@@ -2101,7 +2214,7 @@ void WriteNewData_convert_one_image(const char *infilename)
     Write_Huffman_Table(fpdat);
 
     //解码实际数据
-    if (WriteNewData(jdec,fpdat) < 0)
+    if (Write_New_Body(jdec, fpdat) < 0)
         printf(tinyjpeg_get_printfstring(jdec));
 //写完数据后清空存储区
 
@@ -2437,64 +2550,7 @@ void write_head_data(const char *infilename,FILE*fpdat)
     //分配内存
     jdec = tinyjpeg_init();
 
-
-
     Witeheaddata_tinyjpeg_parse_header(jdec, buf, length_of_file,fpdat);
-
-//    int flag=0;
-//    int count=0;
-//    while(1){
-//        count++;
-//        /* Skip any padding ff byte (this is normal) */
-//        //跳过0xff字节
-//        while (*stream == 0xff){
-//            fprintf(fpdat,"%c",*stream);
-//            *stream++;
-//        }
-//        //marker是跳过0xff字节后1个字节的内容
-//        fprintf(fpdat,"%c",*stream);
-//        marker = *stream++;
-//
-//
-//        //chunk_len是marker后面2个字节的内容（大端模式需要转换）
-//        //包含自身，但不包含0xff+marker2字节
-//        chuck_len = be16_to_cpu(stream);
-//        //指向下一个chunk的指针
-//        next_chunck = stream + chuck_len;
-//
-//        //各种不同的标签
-//        switch (marker)
-//        {
-//            case DHT:
-//                //开始解析DHT
-//                flag=1;
-//                break;
-//            default:
-//                break;
-//        }
-//        if(flag==1){
-//            break;
-//        }
-//        fprintf(fpdat,"%c",*stream);
-//        fprintf(fpdat,"%c",stream[1]);
-//        //解下一个segment
-//        stream = next_chunck;
-//    }
-
-
-//    int flag=0;
-//
-//    if (jdec == NULL)
-//        printf("Not enough memory to alloc the structure need for decompressing\n");
-//
-//    while (flag!=5){
-//        if(*stream == 0xff&&(stream[1] ==SOI||stream[1] ==APP0||stream[1] ==SOF
-//                            ||stream[1] ==DQT||stream[1] ==DHT)){
-//            flag++;
-//        }
-//        fprintf(fpdat,"%c",*stream);
-//        *stream++;
-//    }
 
     free(buf);
 
@@ -2507,8 +2563,6 @@ int main(){
     //get all the huffman table
     for(workon=0;workon<JPEGFileNum;workon++){
 
-        //  char *fp="/Users/ljc/摄影照片LJC_0282.jpg";
-        //strcpy(fp,strcat("/Users/ljc/摄影照片",JPEGFileNameRecord[i]));
         printf("\n%s\n",Dir_Record->dir_huff[workon].FullPathName);
         convert_one_image(Dir_Record->dir_huff[workon].FullPathName);
     }
