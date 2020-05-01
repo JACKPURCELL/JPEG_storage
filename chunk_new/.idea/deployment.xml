@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="Aliyun1">
+    <serverData>
+      <paths name="Aliyun1">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/chunk_new" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="远程主机 (b163e360-e43a-4248-8055-682ed4a95cab)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/tmp/tmp.2h1MIVal24" local="$PROJECT_DIR$/src" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/src/cmake-build-debug-" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>

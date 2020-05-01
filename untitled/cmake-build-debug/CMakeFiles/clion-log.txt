@@ -1,0 +1,30 @@
+"/Users/ljc/Library/Application Support/JetBrains/Toolbox/apps/CLion/ch-0/193.6494.38/CLion.app/Contents/bin/cmake/mac/bin/cmake" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/gcc/9.2.0_1/bin/gcc-9 -DCMAKE_CXX_COMPILER=/usr/local/Cellar/gcc/9.2.0_1/bin/g++-9 -G "CodeBlocks - Unix Makefiles" /Users/ljc/Documents/GitHub/JPEG_storage/untitled
+-- The C compiler identification is unknown
+-- The CXX compiler identification is unknown
+CMake Error at CMakeLists.txt:2 (project):
+  The CMAKE_C_COMPILER:
+
+    /usr/local/Cellar/gcc/9.2.0_1/bin/gcc-9
+
+  is not a full path to an existing compiler tool.
+
+  Tell CMake where to find the compiler by setting either the environment
+  variable "CC" or the CMake cache entry CMAKE_C_COMPILER to the full path to
+  the compiler, or to the compiler name if it is in the PATH.
+
+
+CMake Error at CMakeLists.txt:2 (project):
+  The CMAKE_CXX_COMPILER:
+
+    /usr/local/Cellar/gcc/9.2.0_1/bin/g++-9
+
+  is not a full path to an existing compiler tool.
+
+  Tell CMake where to find the compiler by setting either the environment
+  variable "CXX" or the CMake cache entry CMAKE_CXX_COMPILER to the full path
+  to the compiler, or to the compiler name if it is in the PATH.
+
+
+-- Configuring incomplete, errors occurred!
+See also "/Users/ljc/Documents/GitHub/JPEG_storage/untitled/cmake-build-debug/CMakeFiles/CMakeOutput.log".
+See also "/Users/ljc/Documents/GitHub/JPEG_storage/untitled/cmake-build-debug/CMakeFiles/CMakeError.log".
