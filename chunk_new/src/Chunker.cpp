@@ -12,6 +12,8 @@ extern Configure config;
 struct timeval timestartChunker;
 struct timeval timeendChunker;
 
+messageQueue<Data_t> *inputMQ_;
+
 void PRINT_BYTE_ARRAY_CHUNKER(FILE *file, void *mem, uint32_t len) {
     if (!mem || !len) {
         fprintf(file, "\n( null )\n");
