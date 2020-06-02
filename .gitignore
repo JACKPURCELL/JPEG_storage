@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+chunk_new/cmake-build-debug
+
+src/cmake-build-debug
