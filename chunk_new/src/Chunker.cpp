@@ -2,12 +2,14 @@
 // Created by 梁嘉城 on 2020/3/19.
 //
 
-#include "Chunker.h"
+#include "Chunker.hpp"
 
 #include <sys/time.h>
 
 
 extern Configure config;
+extern Database fp2ChunkDB;
+extern Database fileName2metaDB;
 
 struct timeval timestartChunker;
 struct timeval timeendChunker;
@@ -30,10 +32,13 @@ void PRINT_BYTE_ARRAY_CHUNKER(FILE *file, void *mem, uint32_t len) {
     fprintf(file, "\n}\n");
 }
 
-Chunker::Chunker(std::string path) {
+Chunker::Chunker(std::string path,StorageCore* storageObj) {
     loadChunkFile(path);
     ChunkerInit(path);
     cryptoObj = new CryptoPrimitive();
+    storageObj_ = storageObj;
+//    dataSRObj = new DataSR(storageObj_);
+
 //    keyClientObj = keyClientObjTemp;
 }
 
@@ -75,6 +80,9 @@ Chunker::~Chunker() {
     if (chunkingFile.is_open()) {
         chunkingFile.close();
     }
+    if (storageObj_ != nullptr)
+        delete storageObj_;
+
 }
 
 void Chunker::ChunkerInit(string path) {
@@ -179,11 +187,11 @@ void Chunker::ChunkerInit(string path) {
 }
 
 bool Chunker::chunking() {
-    /*fixed-size Chunker*/
-    if (ChunkerType == CHUNKER_FIX_SIZE_TYPE) {
-        printf("error\n");
-//        fixSizeChunking();
-    }
+//    /*fixed-size Chunker*/
+//    if (ChunkerType == CHUNKER_FIX_SIZE_TYPE) {
+//        printf("error\n");
+////        fixSizeChunking();
+//    }
     /*variable-size Chunker*/
     if (ChunkerType == CHUNKER_VAR_SIZE_TYPE) {
         varSizeChunking();
@@ -194,6 +202,9 @@ bool Chunker::chunking() {
 
 
 void Chunker::varSizeChunking() {
+    RecipeList_t recipeList;
+    Recipe_t fileRecipe;
+
     gettimeofday(&timestartChunker, NULL);
     uint16_t winFp;
     uint64_t chunkBufferCnt = 0, chunkIDCnt = 0;
@@ -236,12 +247,29 @@ void Chunker::varSizeChunking() {
                     return;
                 }
 
-//                Data_t tempChunk;
-//                tempChunk.chunk.ID = chunkIDCnt;
-//                tempChunk.chunk.logicDataSize = chunkBufferCnt;
-//                memcpy(tempChunk.chunk.logicData, chunkBuffer, chunkBufferCnt);
-//                memcpy(tempChunk.chunk.chunkHash, hash, CHUNK_HASH_SIZE);
-//                tempChunk.dataType = DATA_TYPE_CHUNK;
+                Data_t tempChunk;
+                tempChunk.chunk.ID = chunkIDCnt;
+                tempChunk.chunk.logicDataSize = chunkBufferCnt;
+                memcpy(tempChunk.chunk.logicData, chunkBuffer, chunkBufferCnt);
+                memcpy(tempChunk.chunk.chunkHash, hash, CHUNK_HASH_SIZE);
+                tempChunk.dataType = DATA_TYPE_CHUNK;
+
+                RecipeEntry_t newRecipeEntry;
+                newRecipeEntry.chunkID = tempChunk.chunk.ID;
+                newRecipeEntry.chunkSize = tempChunk.chunk.logicDataSize;
+                memcpy(newRecipeEntry.chunkHash, tempChunk.chunk.chunkHash, CHUNK_HASH_SIZE);
+                memcpy(newRecipeEntry.chunkKey, tempChunk.chunk.encryptKey, CHUNK_ENCRYPT_KEY_SIZE);
+                recipeList.push_back(newRecipeEntry);
+                std::string tmpdata;
+                if (fp2ChunkDB.query((char *)hash, tmpdata)) {
+                    ;
+                } else {
+                    if (!storageObj_->saveChunk((char *)hash, (char *)tempChunk.chunk.logicData, tempChunk.chunk.logicDataSize)) {
+                        cerr << "DedupCore : dedup stage 2 report error" << endl;
+                        return ;
+                    }
+                }
+
 //                if (!insertMQToKeyClient(tempChunk)) {
 //                    cerr << "Chunker : error insert chunk to keyClient MQ for chunk ID = " << tempChunk.chunk.ID
 //                         << endl;
@@ -258,12 +286,29 @@ void Chunker::varSizeChunking() {
                     return;
                 }
 
-//                Data_t tempChunk;
-//                tempChunk.chunk.ID = chunkIDCnt;
-//                tempChunk.chunk.logicDataSize = chunkBufferCnt;
-//                memcpy(tempChunk.chunk.logicData, chunkBuffer, chunkBufferCnt);
-//                memcpy(tempChunk.chunk.chunkHash, hash, CHUNK_HASH_SIZE);
-//                tempChunk.dataType = DATA_TYPE_CHUNK;
+                Data_t tempChunk;
+                tempChunk.chunk.ID = chunkIDCnt;
+                tempChunk.chunk.logicDataSize = chunkBufferCnt;
+                memcpy(tempChunk.chunk.logicData, chunkBuffer, chunkBufferCnt);
+                memcpy(tempChunk.chunk.chunkHash, hash, CHUNK_HASH_SIZE);
+                tempChunk.dataType = DATA_TYPE_CHUNK;
+
+                RecipeEntry_t newRecipeEntry;
+                newRecipeEntry.chunkID = tempChunk.chunk.ID;
+                newRecipeEntry.chunkSize = tempChunk.chunk.logicDataSize;
+                memcpy(newRecipeEntry.chunkHash, tempChunk.chunk.chunkHash, CHUNK_HASH_SIZE);
+                memcpy(newRecipeEntry.chunkKey, tempChunk.chunk.encryptKey, CHUNK_ENCRYPT_KEY_SIZE);
+                recipeList.push_back(newRecipeEntry);
+                std::string tmpdata;
+                if (fp2ChunkDB.query((char *)hash, tmpdata)) {
+                    ;
+                } else {
+                    if (!storageObj_->saveChunk((char *)hash, (char *)tempChunk.chunk.logicData, tempChunk.chunk.logicDataSize)) {
+                        cerr << "DedupCore : dedup stage 2 report error" << endl;
+                        return ;
+                    }
+                }
+
 //                if (!insertMQToKeyClient(tempChunk)) {
 //                    cerr << "Chunker : error insert chunk to keyClient MQ for chunk ID = " << tempChunk.chunk.ID
 //                         << endl;
@@ -285,12 +330,30 @@ void Chunker::varSizeChunking() {
             cerr << "Chunker : average size chunking compute hash error" << endl;
             return;
         }
-//        Data_t tempChunk;
-//        tempChunk.chunk.ID = chunkIDCnt;
-//        tempChunk.chunk.logicDataSize = chunkBufferCnt;
-//        memcpy(tempChunk.chunk.logicData, chunkBuffer, chunkBufferCnt);
-//        memcpy(tempChunk.chunk.chunkHash, hash, CHUNK_HASH_SIZE);
-//        tempChunk.dataType = DATA_TYPE_CHUNK;
+
+        Data_t tempChunk;
+        tempChunk.chunk.ID = chunkIDCnt;
+        tempChunk.chunk.logicDataSize = chunkBufferCnt;
+        memcpy(tempChunk.chunk.logicData, chunkBuffer, chunkBufferCnt);
+        memcpy(tempChunk.chunk.chunkHash, hash, CHUNK_HASH_SIZE);
+        tempChunk.dataType = DATA_TYPE_CHUNK;
+
+        RecipeEntry_t newRecipeEntry;
+        newRecipeEntry.chunkID = tempChunk.chunk.ID;
+        newRecipeEntry.chunkSize = tempChunk.chunk.logicDataSize;
+        memcpy(newRecipeEntry.chunkHash, tempChunk.chunk.chunkHash, CHUNK_HASH_SIZE);
+        memcpy(newRecipeEntry.chunkKey, tempChunk.chunk.encryptKey, CHUNK_ENCRYPT_KEY_SIZE);
+        recipeList.push_back(newRecipeEntry);
+        std::string tmpdata;
+        if (fp2ChunkDB.query((char *)hash, tmpdata)) {
+            ;
+        } else {
+            if (!storageObj_->saveChunk((char *)hash, (char *)tempChunk.chunk.logicData, tempChunk.chunk.logicDataSize)) {
+                cerr << "DedupCore : dedup stage 2 report error" << endl;
+                return ;
+            }
+        }
+
 //        if (!insertMQToKeyClient(tempChunk)) {
 //            cerr << "Chunker : error insert chunk to keyClient MQ for chunk ID = " << tempChunk.chunk.ID << endl;
 //            return;
@@ -303,6 +366,14 @@ void Chunker::varSizeChunking() {
     recipe.recipe.fileRecipeHead.fileSize = fileSize;
     recipe.recipe.keyRecipeHead.fileSize = recipe.recipe.fileRecipeHead.fileSize;
     recipe.dataType = DATA_TYPE_RECIPE;
+
+    if (!storageObj_->checkRecipeStatus(recipe.recipe, recipeList)) {
+        cerr << "StorageCore : verify Recipe fail, send resend flag" << endl;
+    } else {
+        cerr << "StorageCore : verify Recipe succes" << endl;
+    }
+
+
 //    if (!insertMQToKeyClient(recipe)) {
 //        cerr << "Chunker : error insert recipe head to keyClient MQ" << endl;
 //        return;
@@ -311,6 +382,7 @@ void Chunker::varSizeChunking() {
 //        cerr << "Chunker: set chunking done flag error" << endl;
 //        return;
 //    }
+
     cout << "Chunker : variable size chunking over:\nTotal file size = " << recipe.recipe.fileRecipeHead.fileSize
          << "; Total chunk number = " << recipe.recipe.fileRecipeHead.totalChunkNumber << endl;
     gettimeofday(&timeendChunker, NULL);
@@ -321,10 +393,12 @@ void Chunker::varSizeChunking() {
     return;
 }
 
-//bool Chunker::insertMQToKeyClient(Data_t &newData) {
-//    return keyClientObj->insertMQFromChunker(newData);
-//}
+
 //
+//bool Chunker::insertMQToDataBase(Data_t &newData) {
+//    return dataSRObj->insertMQFromChunker(newData);
+//}
+
 //bool Chunker::setJobDoneFlag() {
 //    return keyClientObj->editJobDoneFlag();
 //}

@@ -2,7 +2,7 @@
 // Created by 梁嘉城 on 2020/3/21.
 //
 
-#include "cryptoPrimitive.h"
+#include "cryptoPrimitive.hpp"
 
 /*initialize the static variable*/
 opensslLock_t* CryptoPrimitive::opensslLock_ = NULL;
