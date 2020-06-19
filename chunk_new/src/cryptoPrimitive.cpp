@@ -107,7 +107,7 @@ CryptoPrimitive::CryptoPrimitive()
     hashSize_ = CHUNK_HASH_SIZE;
     //int keySize_ = CHUNK_ENCRYPT_KEY_SIZE;
     blockSize_ = CRYPTO_BLOCK_SZIE;
-    md_ = EVP_md5();
+    md_ = EVP_sha256();
     cipherctx_ = EVP_CIPHER_CTX_new();
     mdctx_ = EVP_MD_CTX_new();
     EVP_MD_CTX_init(mdctx_);
@@ -147,38 +147,37 @@ CryptoPrimitive::~CryptoPrimitive()
  */
 bool CryptoPrimitive::generateHash(u_char* dataBuffer, const int dataSize, u_char* hash)
 {
-    MD5(dataBuffer,dataSize,hash);
-    for(int i = 0; i < CHUNK_HASH_SIZE; i++){
-        if(hash[i]=='\0'){
-            hash[i]='\200';
-        }
+
+    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+
+    if (ctx == nullptr) {
+        cerr << "error initial MD ctx\n";
+        return false;
     }
-//    EVP_MD_CTX* ctx = EVP_MD_CTX_new();g
-//
-//    if (ctx == nullptr) {
-//        cerr << "error initial MD ctx\n";
-//        return false;
-//    }
-//
-//    if (EVP_DigestInit_ex(ctx, EVP_md5(), nullptr) != 1) {
-//        cerr << "hash error\n";
-//        EVP_MD_CTX_free(ctx);
-//        return false;
-//    }
-//
-//    if (EVP_DigestUpdate(ctx, dataBuffer, dataSize) != 1) {
-//    if (EVP_DigestUpdate(ctx, dataBuffer, dataSize) != 1) {
-//        cerr << "hash error\n";
-//        EVP_MD_CTX_free(ctx);
-//        return false;
-//    }
-//    int hashSize;
-//    if (EVP_DigestFinal_ex(ctx, hash, (unsigned int*)&hashSize) != 1) {
-//        cerr << "hash error\n";
-//        EVP_MD_CTX_free(ctx);
-//        return false;
-//    }
-//    EVP_MD_CTX_free(ctx);
+
+    if (EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr) != 1) {
+        cerr << "hash error\n";
+        EVP_MD_CTX_free(ctx);
+        return false;
+    }
+
+    if (EVP_DigestUpdate(ctx, dataBuffer, dataSize) != 1) {
+        cerr << "hash error\n";
+        EVP_MD_CTX_free(ctx);
+        return false;
+    }
+    int hashSize;
+    if (EVP_DigestFinal_ex(ctx, hash, (unsigned int*)&hashSize) != 1) {
+        cerr << "hash error\n";
+        EVP_MD_CTX_free(ctx);
+        return false;
+    }
+    EVP_MD_CTX_free(ctx);
+        for(int i = 0; i < CHUNK_HASH_SIZE; i++){
+            if(hash[i]=='\0'){
+                hash[i]='\200';
+            }
+        }
     return true;
 }
 
