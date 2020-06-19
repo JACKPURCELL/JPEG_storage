@@ -7,7 +7,7 @@ struct timeval timeendStorage;
 extern Configure config;
 extern Database fp2ChunkDB;
 extern Database fileName2metaDB;
-
+int chunkcount=0;
 void PRINT_BYTE_ARRAY_STORAGE_CORE(FILE *file, void *mem, uint32_t len) {
     if (!mem || !len) {
         fprintf(file, "\n( null )\n");
@@ -257,6 +257,10 @@ bool StorageCore::restoreChunk(std::string chunkHash, std::string &chunkDataStr)
     keyForChunkHashDB_t key;
     string ans;
     bool status = fp2ChunkDB.query(chunkHash, ans);
+    chunkcount++;
+    if(chunkcount==10){
+        printf("aaa\n");
+    }
     if (status) {
         memcpy(&key, &ans[0], sizeof(keyForChunkHashDB_t));
         char chunkData[key.length];

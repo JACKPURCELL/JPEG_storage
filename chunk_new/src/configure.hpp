@@ -19,9 +19,9 @@ using namespace std;
 #define MAX_CHUNK_SIZE 16384 // macro for the max size of variable-size chunker
 
 #define CHUNK_FINGER_PRINT_SIZE 32
-#define CHUNK_HASH_SIZE 32
+#define CHUNK_HASH_SIZE 16
 #define CHUNK_ENCRYPT_KEY_SIZE 32
-#define FILE_NAME_HASH_SIZE 32
+#define FILE_NAME_HASH_SIZE 16
 
 #define DATA_TYPE_RECIPE 1
 #define DATA_TYPE_CHUNK 2

@@ -20,6 +20,7 @@
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
 #include <pthread.h>
+#include <openssl/md5.h>
 
 #define OPENSSL_THREAD_DEFINES
 

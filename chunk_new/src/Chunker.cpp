@@ -13,7 +13,7 @@ extern Database fileName2metaDB;
 
 struct timeval timestartChunker;
 struct timeval timeendChunker;
-
+int chunkcount2=0;
 //messageQueue<Data_t> *inputMQ_;
 
 void PRINT_BYTE_ARRAY_CHUNKER(FILE *file, void *mem, uint32_t len) {
@@ -254,6 +254,10 @@ void Chunker::varSizeChunking() {
                 memcpy(tempChunk.chunk.chunkHash, hash, CHUNK_HASH_SIZE);
                 tempChunk.dataType = DATA_TYPE_CHUNK;
 
+                chunkcount2++;
+                if(chunkcount2==10){
+                    printf("abc\n");
+                }
                 RecipeEntry_t newRecipeEntry;
                 newRecipeEntry.chunkID = tempChunk.chunk.ID;
                 newRecipeEntry.chunkSize = tempChunk.chunk.logicDataSize;
