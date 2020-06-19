@@ -35,5 +35,6 @@ chunk_new/cmake-build-debug
 
 chunk_new/src/cmake-build-debug-
 chunk_new/src/cmake-build-debug-/*
-
+chunk_new/src/cmake-build-debug
+chunk_new/src/cmake-build-debug/*
 
