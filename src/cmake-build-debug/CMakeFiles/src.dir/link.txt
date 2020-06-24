@@ -1,1 +1,0 @@
-/usr/local/Cellar/gcc/9.2.0_1/bin/g++-9  -g -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/src.dir/main.cpp.o  -o src 

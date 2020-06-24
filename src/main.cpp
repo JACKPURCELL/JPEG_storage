@@ -6,7 +6,7 @@
  * slowtable will be used when the first lookup didn't give the result.
  */
 
-#define FOLDER "/Users/ljc/Documents/GitHub/JPEG_storage/test"
+#define FOLDER "/tmp/tmp.V8ahrx1hrx"
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -1664,6 +1664,8 @@ static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct 
 
 char* itoa (long long n)
 {
+
+
     long long i,sign;
     if((sign=n)<0)//记录符号
         n=-n;//使n成为正数
@@ -1678,8 +1680,9 @@ char* itoa (long long n)
     }
     while ((n/=10)>0);//删除该数字
     s[i]='\0';
-    for(int k=0;k<strlen(s);k++){
-        str[k]=s[strlen(s)-1-k];
+    int len_s=strlen(s);
+    for(int k=0;k<len_s;k++){
+        str[k]=s[len_s-1-k];
         if(sign<0){
             if(str[k]=='1'){
                 str[k]='0';
@@ -1688,10 +1691,11 @@ char* itoa (long long n)
             }
         }
     }
-    str[strlen(str)]='\0';
+    str[strlen(s)]='\0';
     memset(s,'\0', sizeof(s));
     return str;
 }
+
 
 char* tobin(long long n)
 {
@@ -2082,7 +2086,7 @@ int Write_New_Body(struct jdec_private *priv, FILE *fp)
         fprintf(fp,"%c",0x11);
         fprintf(fp,"%c",0x02);
         fprintf(fp,"%c",0x11);
-   } else{
+    } else{
         fprintf(fp,"%c",0x01);
         fprintf(fp,"%c",0x00);
         fprintf(fp,"%c",0x02);
@@ -2582,7 +2586,6 @@ int main(){
 
     return 0;
 }
-
 
 
 

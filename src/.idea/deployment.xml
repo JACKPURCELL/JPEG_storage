@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always">
+  <component name="PublishConfigData">
     <serverData>
       <paths name="远程主机 (09dcc5ea-d337-4280-bd90-0d9dfb33c4f9)">
         <serverdata>
           <mappings>
-            <mapping deploy="/tmp/tmp.TmoWvFTw2X" local="$PROJECT_DIR$/src" />
+            <mapping deploy="/tmp/tmp.V8ahrx1hrx" local="$PROJECT_DIR$" />
           </mappings>
           <excludedPaths>
-            <excludedPath local="true" path="$PROJECT_DIR$/src/cmake-build-debug-" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-" />
           </excludedPaths>
         </serverdata>
       </paths>
     </serverData>
-    <option name="myAutoUpload" value="ALWAYS" />
   </component>
 </project>
