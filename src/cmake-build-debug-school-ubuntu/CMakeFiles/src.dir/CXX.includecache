@@ -1,0 +1,44 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/tmp/tmp.MD9ecJVrDZ/main.cpp
+setjmp.h
+-
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+stdint.h
+-
+errno.h
+-
+string
+-
+iostream
+-
+vector
+-
+tinyjpeg-internal.h
+/tmp/tmp.MD9ecJVrDZ/tinyjpeg-internal.h
+sys/uio.h
+-
+sys/io.h
+-
+dirent.h
+-
+unistd.h
+-
+climits
+-
+bitset
+-
+
+/tmp/tmp.MD9ecJVrDZ/tinyjpeg-internal.h
+

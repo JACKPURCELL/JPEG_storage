@@ -1017,8 +1017,8 @@ int tinyjpeg_decode(struct jdec_private *priv)
         ystride_by_mcu = 16;
         printf("Use decode 2x2 sampling\n");
         Dir_Record->dir_huff[workon].type=1;
-        printf("Not supported now!!!!!!!!\n");
-        exit(0);
+//        printf("Not supported now!!!!!!!!\n");
+//        exit(0);
     } else {
         decode_MCU = decode_mcu_table[2];
         xstride_by_mcu = 16;
@@ -1110,7 +1110,6 @@ void build_huff_val_useful_test(){
         d++;
         huff_val_useful->AC1.count=d;
     }
-    strcpy(huff_val_useful->DC0.code[1],"010");
 
 
 

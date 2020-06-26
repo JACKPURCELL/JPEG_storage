@@ -127,60 +127,60 @@ void usage() {
 }
 
 
-//用于测试，自动上传目录下全部文件
-int main(int argv, char* argc[]) {
-    fp2ChunkDB.openDB(config.getFp2ChunkDBName());
-    fileName2metaDB.openDB(config.getFp2MetaDBame());
-
-
-        getFilelist();
-
-        for(workon=0;workon<JPEGFileNum;workon++){
-            vector<boost::thread *> thList;
-            boost::thread *th;
-            boost::thread::attributes attrs;
-            attrs.set_stack_size(200 * 1024 * 1024);
-
-            struct sigaction sa;
-            sa.sa_handler = SIG_IGN;
-            sigaction(SIGPIPE, &sa, 0);
-
-            sigaction(SIGKILL, &sa, 0);
-            sigaction(SIGINT, &sa, 0);
-
-
-
-            storageObj = new StorageCore();
-
-
-            printf("\n%s\n",FullPathName[workon]);
-            string inputFile(FullPathName[workon]);
-            chunkerObj = new Chunker(inputFile,storageObj);
-
-            // start chunking thread
-            th = new boost::thread(attrs, boost::bind(&Chunker::chunking, chunkerObj));
-            thList.push_back(th);
-            gettimeofday(&timestart, NULL);
-
-
-
-            for (auto it : thList) {
-                it->join();
-            }
-
-            if (storageObj != nullptr)
-                delete storageObj;
-
-
-            gettimeofday(&timeend, NULL);
-            long diff = 1000000 * (timeend.tv_sec - timestart.tv_sec) + timeend.tv_usec - timestart.tv_usec;
-            double second = diff / 1000000.0;
-            cout << "the total work time is " << diff << " us = " << second << " s" << endl;
-        }
-
-
-    return 0;
-}
+////用于测试，自动上传目录下全部文件
+//int main(int argv, char* argc[]) {
+//    fp2ChunkDB.openDB(config.getFp2ChunkDBName());
+//    fileName2metaDB.openDB(config.getFp2MetaDBame());
+//
+//
+//        getFilelist();
+//
+//        for(workon=0;workon<JPEGFileNum;workon++){
+//            vector<boost::thread *> thList;
+//            boost::thread *th;
+//            boost::thread::attributes attrs;
+//            attrs.set_stack_size(200 * 1024 * 1024);
+//
+//            struct sigaction sa;
+//            sa.sa_handler = SIG_IGN;
+//            sigaction(SIGPIPE, &sa, 0);
+//
+//            sigaction(SIGKILL, &sa, 0);
+//            sigaction(SIGINT, &sa, 0);
+//
+//
+//
+//            storageObj = new StorageCore();
+//
+//
+//            printf("\n%s\n",FullPathName[workon]);
+//            string inputFile(FullPathName[workon]);
+//            chunkerObj = new Chunker(inputFile,storageObj);
+//
+//            // start chunking thread
+//            th = new boost::thread(attrs, boost::bind(&Chunker::chunking, chunkerObj));
+//            thList.push_back(th);
+//            gettimeofday(&timestart, NULL);
+//
+//
+//
+//            for (auto it : thList) {
+//                it->join();
+//            }
+//
+//            if (storageObj != nullptr)
+//                delete storageObj;
+//
+//
+//            gettimeofday(&timeend, NULL);
+//            long diff = 1000000 * (timeend.tv_sec - timestart.tv_sec) + timeend.tv_usec - timestart.tv_usec;
+//            double second = diff / 1000000.0;
+//            cout << "the total work time is " << diff << " us = " << second << " s" << endl;
+//        }
+//
+//
+//    return 0;
+//}
 
 
 
@@ -191,66 +191,66 @@ int main(int argv, char* argc[]) {
 
 
 //用于正常使用
-//int main(int argv, char* argc[]) {
-//    vector<boost::thread *> thList;
-//    boost::thread *th;
-//    boost::thread::attributes attrs;
-//    attrs.set_stack_size(200 * 1024 * 1024);
-//
-//    struct sigaction sa;
-//    sa.sa_handler = SIG_IGN;
-//    sigaction(SIGPIPE, &sa, 0);
-//
-//    sigaction(SIGKILL, &sa, 0);
-//    sigaction(SIGINT, &sa, 0);
-//
-//    fp2ChunkDB.openDB(config.getFp2ChunkDBName());
-//    fileName2metaDB.openDB(config.getFp2MetaDBame());
-//
-//    storageObj = new StorageCore();
-//
-//    if (strcmp("-r", argc[1]) == 0) {
-//        string fileName(argc[2]);
-//        printf("%s ++ %s\n",argc[1] , argc[2]);
-//        recvDecodeObj = new RecvDecode(fileName,storageObj);
-//        retrieverObj = new Retriever(fileName, recvDecodeObj,storageObj);
-//
-//        for (int i = 0; i < config.getRecvDecodeThreadLimit(); i++) {
-//            th = new boost::thread(attrs, boost::bind(&RecvDecode::run, recvDecodeObj));
-//            thList.push_back(th);
-//        }
-//        th = new boost::thread(attrs, boost::bind(&Retriever::recvThread, retrieverObj));
-//        thList.push_back(th);
-//
-//    } else if (strcmp("-s", argc[1]) == 0) {
-//
-//    string inputFile(argc[2]);
-//    chunkerObj = new Chunker(inputFile,storageObj);
-//
-//    // start chunking thread
-//    th = new boost::thread(attrs, boost::bind(&Chunker::chunking, chunkerObj));
-//    thList.push_back(th);
-//
-//    } else {
-//        usage();
-//        return 0;
-//    }
-//
-//    gettimeofday(&timestart, NULL);
-//
-//
-//
-//    for (auto it : thList) {
-//        it->join();
-//    }
-//
-//    if (storageObj != nullptr)
-//        delete storageObj;
-//
-//
-//    gettimeofday(&timeend, NULL);
-//    long diff = 1000000 * (timeend.tv_sec - timestart.tv_sec) + timeend.tv_usec - timestart.tv_usec;
-//    double second = diff / 1000000.0;
-//    cout << "the total work time is " << diff << " us = " << second << " s" << endl;
-//    return 0;
-//}
+int main(int argv, char* argc[]) {
+    vector<boost::thread *> thList;
+    boost::thread *th;
+    boost::thread::attributes attrs;
+    attrs.set_stack_size(200 * 1024 * 1024);
+
+    struct sigaction sa;
+    sa.sa_handler = SIG_IGN;
+    sigaction(SIGPIPE, &sa, 0);
+
+    sigaction(SIGKILL, &sa, 0);
+    sigaction(SIGINT, &sa, 0);
+
+    fp2ChunkDB.openDB(config.getFp2ChunkDBName());
+    fileName2metaDB.openDB(config.getFp2MetaDBame());
+
+    storageObj = new StorageCore();
+
+    if (strcmp("-r", argc[1]) == 0) {
+        string fileName(argc[2]);
+        printf("%s ++ %s\n",argc[1] , argc[2]);
+        recvDecodeObj = new RecvDecode(fileName,storageObj);
+        retrieverObj = new Retriever(fileName, recvDecodeObj,storageObj);
+
+        for (int i = 0; i < config.getRecvDecodeThreadLimit(); i++) {
+            th = new boost::thread(attrs, boost::bind(&RecvDecode::run, recvDecodeObj));
+            thList.push_back(th);
+        }
+        th = new boost::thread(attrs, boost::bind(&Retriever::recvThread, retrieverObj));
+        thList.push_back(th);
+
+    } else if (strcmp("-s", argc[1]) == 0) {
+
+    string inputFile(argc[2]);
+    chunkerObj = new Chunker(inputFile,storageObj);
+
+    // start chunking thread
+    th = new boost::thread(attrs, boost::bind(&Chunker::chunking, chunkerObj));
+    thList.push_back(th);
+
+    } else {
+        usage();
+        return 0;
+    }
+
+    gettimeofday(&timestart, NULL);
+
+
+
+    for (auto it : thList) {
+        it->join();
+    }
+
+    if (storageObj != nullptr)
+        delete storageObj;
+
+
+    gettimeofday(&timeend, NULL);
+    long diff = 1000000 * (timeend.tv_sec - timestart.tv_sec) + timeend.tv_usec - timestart.tv_usec;
+    double second = diff / 1000000.0;
+    cout << "the total work time is " << diff << " us = " << second << " s" << endl;
+    return 0;
+}
