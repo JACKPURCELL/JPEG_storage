@@ -19,9 +19,8 @@
 #include <signal.h>
 #include <boost/thread/thread.hpp>
 
-#define FOLDER "/tmp/jpgtest"
+#define FOLDER "/home/jpglittlerecode"
 
-#define path "../test.jpg"
 
 using namespace std;
 
@@ -181,7 +180,7 @@ void usage() {
 //
 //    return 0;
 //}
-
+//
 
 
 

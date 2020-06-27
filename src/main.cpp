@@ -6,7 +6,7 @@
  * slowtable will be used when the first lookup didn't give the result.
  */
 
-#define FOLDER "/home/ljc/testjpg"
+#define FOLDER "/tmp/tmp.V8ahrx1hrx"
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -1084,33 +1084,32 @@ void build_huff_val_useful_test(){
 
     for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[0].one_huff_num;i++) {
         huff_val_useful->DC0.val[a] = Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[i].val;
-        huff_val_useful->DC0.code[a] = (char*)malloc(sizeof(char)*32);
+        huff_val_useful->DC0.code[a] = (char*)malloc(sizeof(char)*16);
         strcpy(huff_val_useful->DC0.code[a], tobin(Dir_Record->dir_huff[0].jpeg_huff[0].huff_table[i].code));
         a++;
         huff_val_useful->DC0.count = a;
     }
     for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[1].one_huff_num;i++) {
         huff_val_useful->DC1.val[b] = Dir_Record->dir_huff[0].jpeg_huff[1].huff_table[i].val;
-        huff_val_useful->DC1.code[b] = (char*)malloc(sizeof(char)*32);
+        huff_val_useful->DC1.code[b] = (char*)malloc(sizeof(char)*16);
         strcpy(huff_val_useful->DC1.code[b], tobin(Dir_Record->dir_huff[0].jpeg_huff[1].huff_table[i].code));
         b++;
         huff_val_useful->DC1.count = b;
     }
     for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[2].one_huff_num;i++) {
         huff_val_useful->AC0.val[c] = Dir_Record->dir_huff[0].jpeg_huff[2].huff_table[i].val;
-        huff_val_useful->AC0.code[c] = (char*)malloc(sizeof(char)*32);
+        huff_val_useful->AC0.code[c] = (char*)malloc(sizeof(char)*16);
         strcpy(huff_val_useful->AC0.code[c], tobin(Dir_Record->dir_huff[0].jpeg_huff[2].huff_table[i].code));
         c++;
         huff_val_useful->AC0.count = c;
     }
     for(int i=0;i<Dir_Record->dir_huff[0].jpeg_huff[3].one_huff_num;i++) {
         huff_val_useful->AC1.val[d]=Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[i].val;
-        huff_val_useful->AC1.code[d]=(char*)malloc(sizeof(char)*32);
+        huff_val_useful->AC1.code[d]=(char*)malloc(sizeof(char)*16);
         strcpy(huff_val_useful->AC1.code[d],tobin(Dir_Record->dir_huff[0].jpeg_huff[3].huff_table[i].code));
         d++;
         huff_val_useful->AC1.count=d;
     }
-    strcpy(huff_val_useful->DC0.code[1],"010");
 
 
 
@@ -1244,7 +1243,7 @@ void BubbleSort(long long *p, int length, int * index)
 ////    strcpy(arr[1],"01");
 //    cal_best_huffman();
 //    char* str;
-//    str=(char*)malloc(sizeof(char)*32);
+//    str=(char*)malloc(sizeof(char)*16);
 //
 //    for(int i=0;i<length;i++){
 //        if(size_num<one_size_max[size]){
@@ -1302,7 +1301,7 @@ void BubbleSort(long long *p, int length, int * index)
 ////    strcpy(arr[1],"01");
 ////
 ////    char* str;
-////    str=(char*)malloc(sizeof(char)*32);
+////    str=(char*)malloc(sizeof(char)*16);
 ////    for(int i=2;i<length;i++){
 ////
 ////        if(size_num<one_size_max[size]){
@@ -1334,31 +1333,33 @@ void BubbleSort(long long *p, int length, int * index)
 //int one_size_max[17]={0,1,1,1,3,3,2,4,2,0,0,0,0,0,0,0,256};
 int one_size_max[17]={0,1,0,1,3,3,2,4,7,0,0,0,0,0,0,0,256};
 
+char* cal_new_huffman_str=(char*)malloc(sizeof(char)*16);
 void cal_new_huffman(char* arr[],int length){
     long long huffcode=0;
     int huffcode_length=1;
     int size=1;
     int size_num=0;
-    char* str;
-    str=(char*)malloc(sizeof(char)*32);
+
+    strcpy(cal_new_huffman_str,"");
+
 
     for(int i=0;i<length;i++){
         if(size_num<one_size_max[size]){
             if(size_num!=0){
                 huffcode++;
             }
-            strcpy(str,"");
-            strcpy(str,tobin(huffcode));
-            if(strlen(str)<size){
-                int temp_len=strlen(str);
+            strcpy(cal_new_huffman_str,"");
+            strcpy(cal_new_huffman_str,tobin(huffcode));
+            if(strlen(cal_new_huffman_str)<size){
+                int temp_len=strlen(cal_new_huffman_str);
                 for(int j=temp_len;j>=size-temp_len;j--){
-                    str[j]=str[j-1];
+                    cal_new_huffman_str[j]=cal_new_huffman_str[j-1];
                 }
                 for(int j=size-temp_len-1;j>-1;j--){
-                    str[j]='0';
+                    cal_new_huffman_str[j]='0';
                 }
             }
-            strcpy(arr[i],str);
+            strcpy(arr[i],cal_new_huffman_str);
             size_num++;
         }else{//超过当前数量
             size_num=0;
@@ -1372,7 +1373,9 @@ void cal_new_huffman(char* arr[],int length){
 
     }
 
-    free(str);
+    strcpy(cal_new_huffman_str,"");
+
+
 }
 
 void move_array(int arr[],int index[],int length){
@@ -1383,13 +1386,14 @@ void move_array(int arr[],int index[],int length){
     for(int i=0;i<length;i++){
         arr[i]=temp[i];
     }
+    free(temp);
 }
 
 void build_DC0_tree(){
     printf("\nDC0\n");
     const int length=huff_val_useful->DC0.count;
     for (int i = 0; i < length; ++i) {
-        huff_val_useful->DC0.code[i]=(char*)malloc(sizeof(char)*32);
+        huff_val_useful->DC0.code[i]=(char*)malloc(sizeof(char)*16);
     }
     int *index=(int*)malloc(sizeof(int)*length);
     BubbleSort(huff_val_useful->DC0.num,length,index);
@@ -1404,7 +1408,7 @@ void build_DC1_tree(){
     printf("\nDC1\n");
     const int length=huff_val_useful->DC1.count;
     for (int i = 0; i < length; ++i) {
-        huff_val_useful->DC1.code[i]=(char*)malloc(sizeof(char)*32);
+        huff_val_useful->DC1.code[i]=(char*)malloc(sizeof(char)*16);
     }
     int *index=(int*)malloc(sizeof(int)*length);
     BubbleSort(huff_val_useful->DC1.num,length,index);
@@ -1419,7 +1423,7 @@ void build_AC0_tree(){
     printf("\nAC0\n");
     const int length=huff_val_useful->AC0.count;
     for (int i = 0; i < length; ++i) {
-        huff_val_useful->AC0.code[i]=(char*)malloc(sizeof(char)*32);
+        huff_val_useful->AC0.code[i]=(char*)malloc(sizeof(char)*16);
     }
     int *index=(int*)malloc(sizeof(int)*length);
     BubbleSort(huff_val_useful->AC0.num,length,index);
@@ -1434,7 +1438,7 @@ void build_AC1_tree(){
     printf("\nAC1\n");
     const int length=huff_val_useful->AC1.count;
     for (int i = 0; i < length; ++i) {
-        huff_val_useful->AC1.code[i]=(char*)malloc(sizeof(char)*32);
+        huff_val_useful->AC1.code[i]=(char*)malloc(sizeof(char)*16);
     }
     int *index=(int*)malloc(sizeof(int)*length);
     BubbleSort(huff_val_useful->AC1.num,length,index);
@@ -1653,39 +1657,40 @@ static int WriteNewData_get_next_huffman_code(struct jdec_private *priv, struct 
     return 0;
 }
 
+char *itoas=(char*)malloc(sizeof(char)*16);
+
+char *itoastr=(char*)malloc(sizeof(char)*16);
 
 char* itoa (long long n)
 {
 
+    strcpy(itoas,"");
+    strcpy(itoastr,"");
 
     long long i,sign;
     if((sign=n)<0)//记录符号
         n=-n;//使n成为正数
     i=0;
-    char *s;
-    char *str;
-    s=(char*)malloc(sizeof(char)*32);
 
-    str=(char*)malloc(sizeof(char)*32);
-    do{
-        s[i++]=n%10+'0';//取下一个数字
-    }
-    while ((n/=10)>0);//删除该数字
-    s[i]='\0';
-    int len_s=strlen(s);
-    for(int k=0;k<len_s;k++){
-        str[k]=s[len_s-1-k];
-        if(sign<0){
-            if(str[k]=='1'){
-                str[k]='0';
-            } else {
-                str[k]='1';
+        do {
+            itoas[i++] = n % 10 + '0';//取下一个数字
+        } while ((n /= 10) > 0);//删除该数字
+        itoas[i] = '\0';
+        int len_s = strlen(itoas);
+        for (int k = 0; k < len_s; k++) {
+            itoastr[k] = itoas[len_s - 1 - k];
+            if (sign < 0) {
+                if (itoastr[k] == '1') {
+                    itoastr[k] = '0';
+                } else {
+                    itoastr[k] = '1';
+                }
             }
         }
-    }
-    str[strlen(s)]='\0';
-    memset(s,'\0', sizeof(s));
-    return str;
+        itoastr[strlen(itoas)] = '\0';
+        strcpy(itoas,"");
+        return itoastr;
+
 }
 
 
@@ -1693,7 +1698,7 @@ char* tobin(long long n)
 {
     long long binaryNumber = 0;
     long long remainder, i = 1, step = 1;
-    char *str=(char*)malloc(sizeof(char)*32);
+    char *str=(char*)malloc(sizeof(char)*16);
     while (n!=0)
     {
         remainder = n%2;
@@ -1716,6 +1721,8 @@ char*  Find_New_code(int val,int type){
                     return huff_val_useful->DC0.code[i];
                 }
             }
+            printf("我找不到啊！\n");
+            exit(0);
             break;
         case 1:
             for(int i=0;i<256;i++){
@@ -1723,6 +1730,8 @@ char*  Find_New_code(int val,int type){
                     return huff_val_useful->DC1.code[i];
                 }
             }
+            printf("我找不到啊！\n");
+            exit(0);
             break;
         case 2:
             for(int i=0;i<256;i++){
@@ -1730,6 +1739,8 @@ char*  Find_New_code(int val,int type){
                     return huff_val_useful->AC0.code[i];
                 }
             }
+            printf("我找不到啊！\n");
+            exit(0);
             break;
         case 3:
             for(int i=0;i<256;i++){
@@ -1737,6 +1748,8 @@ char*  Find_New_code(int val,int type){
                     return huff_val_useful->AC1.code[i];
                 }
             }
+            printf("我找不到啊！\n");
+            exit(0);
             break;
         default:
             break;
@@ -1745,7 +1758,7 @@ char*  Find_New_code(int val,int type){
 }
 
 
-
+char* write_code=(char*)malloc(sizeof(char)*16);
 
 static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, int component,FILE *fp)
 {
@@ -1760,9 +1773,6 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
     /* Initialize the DCT coef table */
     memset(DCT, 0, sizeof(DCT));
 
-    char* write_code;
-
-    write_code=(char*)malloc(sizeof(char)*16);
 
     /* DC coefficient decoding */
     huff_code = WriteNewData_get_next_huffman_code(priv, c->DC_table,fp);
@@ -1894,7 +1904,7 @@ static void WriteNewData_process_Huffman_data_unit(struct jdec_private *priv, in
     for (j = 0; j < 64; j++)
         c->DCT[j] = DCT[j];
 
-    free(write_code);
+    strcpy(write_code,"");
 }
 
 /*
@@ -2269,24 +2279,26 @@ void Write_One_Huffman_Table(char* str,FILE *fp){
     WriteNewData_Stream_Bits=0;
 }
 
+char* Write_Huffman_Table_str=(char*)malloc(sizeof(Write_Huffman_Table_str)*16);
+
 void Write_Huffman_Table(FILE *fp){
 
+    strcpy(Write_Huffman_Table_str,"");
 
-    char* str;
-    str=(char*)malloc(sizeof(str)*32);
+
 //    fprintf(fp,"%c",0xff);
 //    fprintf(fp,"%c",0xc4);
     fprintf(fp,"%c",0x00);
     if(Dir_Record->dir_huff[WriteNewData_workon].type==0){
         int table_length=70+huff_val_useful->DC0.count+huff_val_useful->DC1.count+huff_val_useful->AC0.count+huff_val_useful->AC1.count;
-        strcpy(str,"");
-        strcpy(str,tobin(table_length));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(table_length));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
     } else{
         int table_length=19+huff_val_useful->DC0.count;
-        strcpy(str,"");
-        strcpy(str,tobin(table_length));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(table_length));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
     }
 
 
@@ -2304,17 +2316,17 @@ void Write_Huffman_Table(FILE *fp){
         }
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
-        strcpy(str,"");
-        strcpy(str,tobin(count[i]));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(count[i]));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
     }
 
     for(int i=0;i<huff_val_useful->DC0.count;i++){
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
-        strcpy(str,"");
-        strcpy(str,tobin(huff_val_useful->DC0.val[i]));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(huff_val_useful->DC0.val[i]));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
     }
@@ -2327,9 +2339,9 @@ void Write_Huffman_Table(FILE *fp){
         fprintf(fp,"%c",0xc4);
         fprintf(fp,"%c",0x00);
         int table_length=19+huff_val_useful->AC0.count;
-        strcpy(str,"");
-        strcpy(str,tobin(table_length));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(table_length));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
     }
     //AC0
     memset(count,0, sizeof(count));
@@ -2342,16 +2354,16 @@ void Write_Huffman_Table(FILE *fp){
         }
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
-        strcpy(str,"");
-        strcpy(str,tobin(count[i]));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(count[i]));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
     }
     for(int i=0;i<huff_val_useful->AC0.count;i++){
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
-        strcpy(str,"");
-        strcpy(str,tobin(huff_val_useful->AC0.val[i]));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(huff_val_useful->AC0.val[i]));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
     }
@@ -2363,9 +2375,9 @@ void Write_Huffman_Table(FILE *fp){
         fprintf(fp,"%c",0xc4);
         fprintf(fp,"%c",0x00);
         int table_length=19+huff_val_useful->DC1.count;
-        strcpy(str,"");
-        strcpy(str,tobin(table_length));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(table_length));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
     }
 
     //DC1
@@ -2379,17 +2391,17 @@ void Write_Huffman_Table(FILE *fp){
         }
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
-        strcpy(str,"");
-        strcpy(str,tobin(count[i]));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(count[i]));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
     }
 
     for(int i=0;i<huff_val_useful->DC1.count;i++){
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
-        strcpy(str,"");
-        strcpy(str,tobin(huff_val_useful->DC1.val[i]));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(huff_val_useful->DC1.val[i]));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
     }
@@ -2402,9 +2414,9 @@ void Write_Huffman_Table(FILE *fp){
         fprintf(fp,"%c",0xff);
         fprintf(fp,"%c",0xc4);
         int table_length=19+huff_val_useful->AC1.count;
-        strcpy(str,"");
-        strcpy(str,tobin(table_length));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(table_length));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
     }
     //AC1
     memset(count,0, sizeof(count));
@@ -2417,21 +2429,21 @@ void Write_Huffman_Table(FILE *fp){
         }
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
-        strcpy(str,"");
-        strcpy(str,tobin(count[i]));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(count[i]));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
     }
 
     for(int i=0;i<huff_val_useful->AC1.count;i++){
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
-        strcpy(str,"");
-        strcpy(str,tobin(huff_val_useful->AC1.val[i]));
-        Write_One_Huffman_Table(str,fp);
+        strcpy(Write_Huffman_Table_str,"");
+        strcpy(Write_Huffman_Table_str,tobin(huff_val_useful->AC1.val[i]));
+        Write_One_Huffman_Table(Write_Huffman_Table_str,fp);
         WriteNewData_Stream.operator<<=(8);
         WriteNewData_Stream_Bits=0;
     }
-    free(str);
+    strcpy(Write_Huffman_Table_str,"");
 };
 
 //__________________________________________________________
